@@ -1,46 +1,86 @@
-#include <stdio.h>
-#include <stdlib.h>
+/*
+ *  hc-sr04.c:
+ *	Simple test program to test the wiringPi functions
+ */
+
 #include <wiringPi.h>
 
-#define TRUE 1
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-#define TRIG 5
-#define ECHO 6
+int TRIG, ECHO;
 
-void setup() {
-    wiringPiSetup();
-    pinMode(TRIG, OUTPUT);
-    pinMode(ECHO, INPUT);
+static int ping()
+{
+	long ping      = 0;
+	long pong      = 0;
+	float distance = 0;
+ 	long timeout   = 500000; // 0.5 sec ~ 171 m
 
-    //TRIG pin must start LOW
-    digitalWrite(TRIG, LOW);
-    delay(30);
+	pinMode(TRIG, OUTPUT);
+	pinMode(ECHO, INPUT);
+
+	// Ensure trigger is low.
+	digitalWrite(TRIG, LOW);
+	delay(50);
+
+	// Trigger the ping.
+	digitalWrite(TRIG, HIGH);
+	delayMicroseconds(10);
+	digitalWrite(TRIG, LOW);
+
+	// Wait for ping response, or timeout.
+	while (digitalRead(ECHO) == LOW && micros() < timeout) {
+	}
+
+	// Cancel on timeout.
+	if (micros() > timeout) {
+		printf("Out of range.\n");
+		return 0;
+	}
+
+	ping = micros();
+
+	// Wait for pong response, or timeout.
+	while (digitalRead(ECHO) == HIGH && micros() < timeout) {
+	}
+
+	// Cancel on timeout.
+	if (micros() > timeout) {
+		printf("Out of range.\n");
+		return 0;
+	}
+
+	pong = micros();
+
+	// Convert ping duration to distance.
+	distance = (float) (pong - ping) * 0.017150;
+	printf("Distance: %.2f cm.\n", distance);
+
+	return 1;
 }
 
-int getCM() {
-    //Send trig pulse
-    digitalWrite(TRIG, HIGH);
-    delayMicroseconds(20);
-    digitalWrite(TRIG, LOW);
+int main (int argc, char *argv[])
+{
+	if (argc != 3) {
+		printf ("usage: %s <trigger> <echo>\n\nWhere:\n- trigger is the wiringPi trigger pin number.\n- echo is the wiringPi echo pin number.\nUsing trigger %d and echo %d.\n", argv[0], argv[1], argv[2]);
+	} else {
+		TRIG = atoi(argv[1]);
+		ECHO = atoi(argv[2]);
+	}
 
-    //Wait for echo start
-    while(digitalRead(ECHO) == LOW);
+	printf ("Raspberry Pi wiringPi HC-SR04 Sonar test program.\n");
 
-    //Wait for echo end
-    long startTime = micros();
-    while(digitalRead(ECHO) == HIGH);
-    long travelTime = micros() - startTime;
+	if (wiringPiSetup () == -1) {
+		exit(EXIT_FAILURE);
+	}
 
-    //Get distance in cm
-    int distance = travelTime / 58;
+	if (setuid(getuid()) < 0) {
+		perror("Dropping privileges failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
-    return distance;
-}
-
-int main(void) {
-    setup();
-
-    printf("Distance: %dcm\n", getCM());
-
-    return 0;
+	ping();
+	return 0;
 }
