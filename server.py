@@ -300,7 +300,7 @@ class server(object):
 
 if __name__ == "__main__":
     working_dir = '/home/nauris/Downloads/images/'
-    model_path = '/home/nauris/Dropbox/lu_master/Maģistra Darbs/coding/model.json'
+    model_path = 'keras_models/model.json'
 
     with open(model_path, 'r') as jfile:
         model = model_from_json(jfile.read())
