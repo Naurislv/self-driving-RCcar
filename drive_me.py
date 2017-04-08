@@ -9,7 +9,7 @@ import sys
 import threading
 import time
 
-import driver as controller
+import controller
 threading.Thread(target=controller.act_loop).start()
 
 fps = sys.argv[1]
@@ -111,6 +111,7 @@ class drive_me(object):
 
         except (EOFError, ConnectionResetError, socket.timeout):  # mostly catch socket.timeout when too FPS
             pass
+
 
 if __name__ == "__main__":
     brain = drive_me()

@@ -1,4 +1,5 @@
 """Server."""
+import argparse
 import cv2
 from datetime import datetime
 from keras.models import model_from_json
@@ -14,9 +15,15 @@ import time
 import traceback
 import usb.core
 import usb.util
+import logging
 
-# Fix error with Keras and TensorFlow
-tf.python.control_flow_ops = tf
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+
+parser = argparse.ArgumentParser(description='Blob downloader')
+parser.add_argument('--autonomous', type=bool, default=False,
+                    help='Boolean. If True then will be using Autonomous car capabilities.')
+
+args = parser.parse_args()
 
 
 class ExitTkinterWindow(object):
@@ -45,11 +52,11 @@ class server(object):
         threading.Thread(target=self.instructor_G27).start()
         while True:
             # accept connections from outside
-            print('Waiting for new connection..')
+            logging.info('Waiting for new connection..')
             (clientsocket, address) = server_socket.accept()
             # now do something with the clientsocket
             # in this case, we'll pretend this is a threaded server
-            print('Connection from {}'.format(address))
+            logging.info('Connection from {}'.format(address))
             threading.Thread(target=self.read_images, args=(clientsocket, address)).start()
             time.sleep(2)
 
@@ -67,9 +74,9 @@ class server(object):
         dev = usb.core.find(idVendor=0x046d, idProduct=0xc29b)
 
         if dev is None:
-            print('Steering wheel not found!')
+            logging.info('Steering wheel not found!')
         else:
-            print('Logitech G27 Racing Wheel found!')
+            logging.info('Logitech G27 Racing Wheel found!')
 
             if dev.is_kernel_driver_active(0):
                 dev.detach_kernel_driver(0)
@@ -94,7 +101,7 @@ class server(object):
                             addresses = sorted(list(self.drivers.keys()))  # get all 1 level keys (addresses)
                             try:
                                 address = addresses[idx]
-                                print('Selecting {} to drive'.format(address))
+                                logging.info('Selecting {} to drive'.format(address))
 
                                 idx += 1
                             except IndexError:
@@ -105,10 +112,10 @@ class server(object):
                         diff = start_time - clicked
                         if diff > 0.3:
                             if self.drivers[address]['save']:
-                                print('Saving files : Stoped')
+                                logging.info('Saving files : Stoped')
                                 self.drivers[address]['save'] = False
                             else:
-                                print('Saving files : Started')
+                                logging.info('Saving files : Started')
                                 dir_name = datetime.now().strftime("%Y-%m-%d-%I:%M:%S")
                                 os.makedirs(working_dir + dir_name)
                                 self.drivers[address]['save_dir'] = dir_name
@@ -118,13 +125,13 @@ class server(object):
                         diff = start_time - clicked
                         if diff > 0.3:
                             if self.drivers[address]['mode'] != 'train':
-                                print('Entering Train mode')
+                                logging.info('Entering Train mode')
                                 self.drivers[address]['mode'] = 'train'
                                 pos_0 = steering_angle
                                 prev_position = steering_angle
                                 adder = 0  # when go past 255 value and start over
                             elif self.drivers[address]['mode'] == 'train':
-                                print('Entering Autonomous mode')
+                                logging.info('Entering Autonomous mode')
                                 self.drivers[address]['speed'] = 0
                                 self.drivers[address]['mode'] = 'autonomous'
                         clicked = time.time()
@@ -159,7 +166,7 @@ class server(object):
         counter = 0
         times = []  # to calculate FPS depending on history data
         th = None
-        print('Entering global loop')
+        logging.info('Entering global loop')
 
         while True:
             try:
@@ -183,8 +190,8 @@ class server(object):
                 th.start()
 
             except Exception:
-                print(traceback.format_exc())
-                print('Display window closed. Closing connection. {}'.format(address[0]))
+                logging.exception()
+                logging.info('Display window closed. Closing connection. {}'.format(address[0]))
                 break
 
             counter += 1
@@ -192,7 +199,7 @@ class server(object):
         del self.drivers[address[0]]
         connection.close()
         clientsocket.close()
-        print('connection closed')
+        logging.info('connection closed')
 
     def steering_angle(self, steering, max_steering, adjust_output=None):
         """Convert steering values to normalized steering angle."""
@@ -234,7 +241,7 @@ class server(object):
         max_steering = 18.5  # max value passed to servo motor
         max_speed = 9  # max value passed to servo motor
 
-        if self.drivers[address[0]]['mode'] == 'autonomous':
+        if self.drivers[address[0]]['mode'] == 'autonomous' and args.autonomous:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # cv2 load image as BGR, but model expects RGB
 
             with graph.as_default():
@@ -302,14 +309,18 @@ if __name__ == "__main__":
     working_dir = '/home/nauris/Downloads/images/'
     model_path = 'keras_models/model.json'
 
-    with open(model_path, 'r') as jfile:
-        model = model_from_json(jfile.read())
-        print('Model loaded')
+    if args.autonomous:
+        with open(model_path, 'r') as jfile:
+            model = model_from_json(jfile.read())
+            logging.info('Model loaded')
 
-    model.compile("adam", "mse")
-    graph = tf.get_default_graph()
-    print('Model compiled')
-    weights_file = model_path.replace('json', 'h5')
-    model.load_weights(weights_file)
-    print('Weights loaded')
+        model.compile("adam", "mse")
+        graph = tf.get_default_graph()
+        logging.info('Model compiled')
+        weights_file = model_path.replace('json', 'h5')
+        model.load_weights(weights_file)
+        logging.info('Weights loaded')
+    else:
+        logging.info('No autonomous driving features.')
+
     server()
