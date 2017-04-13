@@ -18,6 +18,7 @@ height = sys.argv[3]
 # sudo crontab -e
 # @reboot bash /home/pi/self-driving-RCcar/launcher.sh >/home/pi/self-driving-RCcar/logs/cronlog 2>&1
 
+
 class drive_me(object):
     """Main class."""
 

@@ -12,7 +12,6 @@ import struct
 import tensorflow as tf
 import threading
 import time
-import traceback
 import usb.core
 import usb.util
 import logging
