@@ -239,6 +239,7 @@ class server(object):
 
         max_steering = 18.5  # max value passed to servo motor
         max_speed = 20  # max value passed to servo motor
+        min_speed = 10  # min value passed to servo motor
 
         if self.drivers[address[0]]['mode'] == 'autonomous' and args.autonomous:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # cv2 load image as BGR, but model expects RGB
@@ -249,7 +250,14 @@ class server(object):
         else:
             steering, throttle, brakes = self.drivers[address[0]]['commands']
             if brakes == 0:
-                throttle = throttle / 255 * max_speed
+                throttle_noise = 52  # expect throttle to be from 0 .. 255
+                if throttle <= 52:
+                    # to remove fluctuactions when clutch is not completely relaxed
+                    throttle = 0
+                else:
+                    # now throttle will be from min_speed ... max_speed
+                    throttle = (throttle - throttle_noise) / (255 - throttle_noise)
+                    throttle = throttle * (max_speed - min_speed) + min_speed
             else:
                 throttle = -brakes / 255 * max_speed
 
