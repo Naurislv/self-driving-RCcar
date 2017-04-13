@@ -10,14 +10,13 @@ import threading
 import time
 
 import controller
-threading.Thread(target=controller.act_loop).start()
 
 fps = sys.argv[1]
 width = sys.argv[2]
 height = sys.argv[3]
 
 # sudo crontab -e
-# @reboot bash /home/pi/coding/launcher.sh >/home/pi/self-driving-RCcar/logs/cronlog 2>&1
+# @reboot bash /home/pi/self-driving-RCcar/launcher.sh >/home/pi/self-driving-RCcar/logs/cronlog 2>&1
 
 class drive_me(object):
     """Main class."""
