@@ -19,7 +19,7 @@ import logging
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 
-parser = argparse.ArgumentParser(description='Blob downloader')
+parser = argparse.ArgumentParser(description='Autonomous Driving Server')
 parser.add_argument('--autonomous', type=bool, default=False,
                     help='Boolean. If True then will be using Autonomous car capabilities.')
 

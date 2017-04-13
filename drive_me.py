@@ -23,7 +23,7 @@ class drive_me(object):
     def __init__(self):
         """Inicilize class variables."""
         # Connect a client socket to my_server:8000
-        self.my_servers = ['192.168.50.253', '192.168.50.254', '192.168.1.230', '10.13.137.195']  # '192.168.1.230'
+        self.my_servers = ['192.168.10.254']  # '192.168.1.230'
         self.resolution = (int(width), int(height))  # 640,480 ; 320,200
         self.framerate = int(fps)
         self.rotation = 0
