@@ -238,7 +238,7 @@ class server(object):
         #                      None, self.calib_params['mtx'])
 
         max_steering = 18.5  # max value passed to servo motor
-        max_speed = 9  # max value passed to servo motor
+        max_speed = 20  # max value passed to servo motor
 
         if self.drivers[address[0]]['mode'] == 'autonomous' and args.autonomous:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # cv2 load image as BGR, but model expects RGB
@@ -253,7 +253,7 @@ class server(object):
             else:
                 throttle = -brakes / 255 * max_speed
 
-            steering = self.steering_angle(steering, 4000, max_steering)
+            steering = self.steering_angle(steering, 10000, max_steering)
 
         clientsocket.sendall(pickle.dumps({'counter': counter, 'server_time': time.time(),
                                            'instruction': (steering, throttle)}))
