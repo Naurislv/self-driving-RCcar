@@ -8,12 +8,17 @@
 #define ECHO 6
 
 void setup() {
+	std::cout << "DDDD" << '\n';
     wiringPiSetup();
+	std::cout << "CCCC" << '\n';
     pinMode(TRIG, OUTPUT);
     pinMode(ECHO, INPUT);
 
+	std::cout << "BBBB" << '\n';
     //TRIG pin must start LOW
     digitalWrite(TRIG, LOW);
+
+	std::cout << "AAAA" << '\n';
     delay(30);
 }
 
