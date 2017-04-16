@@ -1,4 +1,12 @@
-"""Driving client."""
+"""Driving client.
+
+To run this program in background :
+
+sudo crontab -e
+@reboot bash /home/pi/self-driving-RCcar/launcher.sh >/home/pi/self-driving-RCcar/logs/cronlog 2>&1
+
+"""
+
 import io
 import os
 from picamera import PiCamera
@@ -10,13 +18,22 @@ import threading
 import time
 
 import controller
+from hcsr04sensor import uSensor  # untrasonic sensor
 
 fps = sys.argv[1]
 width = sys.argv[2]
 height = sys.argv[3]
 
-# sudo crontab -e
-# @reboot bash /home/pi/self-driving-RCcar/launcher.sh >/home/pi/self-driving-RCcar/logs/cronlog 2>&1
+trig_pin = 24  # Connected to GPIO pin 24
+echo_pin = 23  # Connected to GPIO pin 23
+uInit = uSensor.Measurement(trig_pin, echo_pin)  # Initialize ultrasonic sensor
+
+
+def uDistance():
+    """Return ultrasonic sensor HCSR04 measurement data converted to centimeters."""
+
+    raw_meas = uInit.raw_distance(sample_size=1, sample_wait=0.001)
+    return uInit.distance_metric(uInit.distance_metric(raw_meas))
 
 
 class drive_me(object):
@@ -72,6 +89,7 @@ class drive_me(object):
                         # our protocol simple)
                         stream = io.BytesIO()
                         counter = 0
+
                         for foo in camera.capture_continuous(stream, 'jpeg', use_video_port=True,
                                                              resize=self.resolution):
                             # Write the length of the capture to the stream and flush to
@@ -80,8 +98,11 @@ class drive_me(object):
 
                             cp = self.server_time[counter]['client_process']
                             ans = self.server_time[counter]['server_time'] - time.time() - cp
+
                             data_string = pickle.dumps({'image': stream.read(),
-                                                        'client_time': ans})
+                                                        'client_time': ans,
+                                                        'uDistance': uDistance()})
+
                             connection.write(struct.pack('<L', len(data_string)))
                             connection.flush()
                             # Rewind the stream and send the image data over the wire

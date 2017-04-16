@@ -184,8 +184,8 @@ class server(object):
 
                 if th is not None:
                     th.join()  # Keras wont work with more than one thread
-                th = threading.Thread(target=self.process_image, args=[clientsocket, address, data,
-                                                                       network_latency, fps, counter])
+                th = threading.Thread(target=self.process_data, args=[clientsocket, address, data,
+                                                                      network_latency, fps, counter])
                 th.start()
 
             except Exception:
@@ -223,7 +223,14 @@ class server(object):
 
         return self.drivers[address]['speed']
 
-    def process_image(self, clientsocket, address, data, network_latency, fps, counter):
+    def check_safety(self, steering, throttle, uDistance):
+
+        if uDistance < 15:
+            return 0, -1
+
+        return steering, throttle
+
+    def process_data(self, clientsocket, address, data, network_latency, fps, counter):
         """Image processing.
 
         1. Image loading
@@ -234,6 +241,8 @@ class server(object):
 
         start_time = time.time()
         image = cv2.imdecode(np.fromstring(data['image'], np.uint8), 1)  # image to be saved
+        uDistance = data['uDistance']  # Ultrasonic sensor measurements in cm
+
         # image = cv2.undistort(image, self.calib_params['mtx'], self.calib_params['dist'],
         #                      None, self.calib_params['mtx'])
 
@@ -263,14 +272,16 @@ class server(object):
 
             steering = self.steering_angle(steering, 10000, max_steering)
 
+        steering, throttle = self.check_safety(steering, throttle, uDistance)  # Safety system. Avoid collisions etc.
         clientsocket.sendall(pickle.dumps({'counter': counter, 'server_time': time.time(),
                                            'instruction': (steering, throttle)}))
 
         processing_time = time.time() - start_time
-        threading.Thread(target=self.display_image, args=[image, address[0], processing_time, network_latency,
-                                                          steering, throttle, fps, counter]).start()
+        threading.Thread(target=self.display_image, args=(image, address[0], processing_time, network_latency,
+                                                          steering, throttle, fps, counter, uDistance)).start()
 
-    def display_image(self, image, address, processing_time, network_latency, steering, throttle, fps, counter):
+    def display_image(self, image, address, processing_time, network_latency,
+                      steering, throttle, fps, counter, uDistance):
         """"Display image alongside with necessary information with cv2."""
         imshape = image.shape
         text = ("FPS: {}\nNetwork: {}ms"
@@ -290,6 +301,7 @@ class server(object):
 
         cv2.putText(im_resized, 'angle: ' + str(steering), (10, 120), font, 0.7, (0, 153, 76), 1, cv2.LINE_AA)
         cv2.putText(im_resized, 'speed: ' + str(throttle), (10, 150), font, 0.7, (0, 128, 255), 1, cv2.LINE_AA)
+        cv2.putText(im_resized, 'collision: ' + str(uDistance), (10, 180), font, 0.7, (255, 0, 0), 1, cv2.LINE_AA)
 
         cv2.startWindowThread()
         cv2.namedWindow(address)
@@ -309,6 +321,7 @@ class server(object):
             add = '000'
         elif counter < 1000:
             add = '00'
+
         cv2.imwrite(working_dir + to_dir + '/{}_{}.jpeg'.format(add + str(counter), instruction), image)
 
 
