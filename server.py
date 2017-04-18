@@ -322,10 +322,12 @@ class server(object):
 
         add = '0'
         if counter < 10:
-            add = '0000'
+            add = '00000'
         elif counter < 100:
-            add = '000'
+            add = '0000'
         elif counter < 1000:
+            add = '000'
+        elif counter < 10000:
             add = '00'
 
         cv2.imwrite(working_dir + to_dir + '/{}_{}.jpeg'.format(add + str(counter), instruction), image)

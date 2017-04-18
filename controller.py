@@ -60,7 +60,7 @@ MOTOR_PWM_MAX = 30
 STEER_MIN = 1123  # Steer servo min feedback value
 STEER_MAX = 837  # Steer servo max feedback value
 STEER_PWM_T = 25/2.55  # Steer servo threshold PWM abs value
-STEER_PWM_MAX = (255-STEER_PWM_T)/2.55  # Steer servo max PWM abs value
+STEER_PWM_MAX = (255 - STEER_PWM_T) / 2.55  # Steer servo max PWM abs value
 STEER_MIN_ANGLE = -18.0  # Steer servo min angle value
 STEER_IDLE_ANGLE = 0.0  # Steer servo idle angle value
 STEER_MAX_ANGLE = 18.0  # Steer servo max angle value
@@ -93,7 +93,7 @@ def steer_goal_set(angle):
         angle = STEER_MAX_ANGLE
     elif (angle < STEER_MIN_ANGLE):
         angle = STEER_MIN_ANGLE
-        goal_steer_angle = angle
+    goal_steer_angle = angle
     return
 
 
@@ -112,8 +112,7 @@ def motor_set(motor_pwm_val):
     else:
         pin_motor_fwd.ChangeDutyCycle(0)
         pin_motor_bwd.ChangeDutyCycle(0)
-
-    return
+        return
 
 
 # low level steering servo control
