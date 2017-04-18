@@ -118,7 +118,7 @@ class drive_me(object):
                         # Write a length of zero to the stream to signal we're done
                         connection.write(struct.pack('<L', 0))
             except Exception as e:
-                logging.exception()
+                # logging.exception()
                 time.sleep(10)
 
     def recevei_thread(self, client_socket, counter):
