@@ -50,12 +50,12 @@ def sensor_loop():
 
         if distance < 40:  # Check whether the distance is within range
             if oor:
-                add_measurement('OoR')
+                add_measurement(999)
                 oor = False
             else:
                 add_measurement(distance)
         else:
-            add_measurement('OoR')
+            add_measurement(999)
             oor = True
 
         time.sleep(0.01)

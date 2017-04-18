@@ -30,7 +30,7 @@ height = sys.argv[3]
 
 def uDistance():
     """Return ultrasonic sensor HCSR04 measurement data converted to centimeters."""
-    return SonicSensor.meas[-1:]
+    return SonicSensor.meas[-1]
 
 
 class drive_me(object):
