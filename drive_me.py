@@ -16,9 +16,12 @@ import struct
 import sys
 import threading
 import time
+import logging
 
 import controller
 from hcsr04sensor import uSensor  # untrasonic sensor
+
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.DEBUG)
 
 fps = sys.argv[1]
 width = sys.argv[2]
