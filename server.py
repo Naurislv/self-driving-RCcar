@@ -48,6 +48,8 @@ class server(object):
         server_socket.listen(0)
 
         self.drivers = {}
+        self.uMemory = 0  # Ultrasonic sensor measurement memory
+
         threading.Thread(target=self.instructor_G27).start()
         while True:
             # accept connections from outside
@@ -188,8 +190,8 @@ class server(object):
                                                                       network_latency, fps, counter])
                 th.start()
 
-            except Exception:
-                logging.exception()
+            except Exception as e:
+                # logging.exception(e)
                 logging.info('Display window closed. Closing connection. {}'.format(address[0]))
                 break
 
@@ -225,8 +227,12 @@ class server(object):
 
     def check_safety(self, steering, throttle, uDistance):
 
-        if uDistance < 15:
-            return 0, -1
+        if uDistance < 30:
+            self.uMemory += 1
+            if self.uMemory > 2:
+                return 0, 1
+        else:
+            self.uMemory = 0
 
         return steering, throttle
 
