@@ -58,7 +58,7 @@ def sensor_loop():
             add_measurement('OoR')
             oor = True
 
-        time.sleep(0.005)
+        time.sleep(0.01)
 
 
 class sensorThread(threading.Thread):
