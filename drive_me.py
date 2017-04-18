@@ -19,7 +19,7 @@ import time
 import logging
 
 import controller
-from hcsr04sensor import sensor as uSensor  # untrasonic sensor
+from ultrasonic_sensor_HCSR04 import SonicSensor
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.DEBUG)
 
@@ -27,16 +27,10 @@ fps = sys.argv[1]
 width = sys.argv[2]
 height = sys.argv[3]
 
-trig_pin = 24  # Connected to GPIO pin 24
-echo_pin = 23  # Connected to GPIO pin 23
-uInit = uSensor.Measurement(trig_pin, echo_pin)  # Initialize ultrasonic sensor
-
 
 def uDistance():
     """Return ultrasonic sensor HCSR04 measurement data converted to centimeters."""
-
-    raw_meas = uInit.raw_distance(sample_size=1, sample_wait=0.001)
-    return uInit.distance_metric(uInit.distance_metric(raw_meas))
+    return SonicSensor.measurements[-1]
 
 
 class drive_me(object):
