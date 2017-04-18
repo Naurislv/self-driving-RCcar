@@ -19,7 +19,7 @@ import time
 import logging
 
 import controller
-from hcsr04sensor import uSensor  # untrasonic sensor
+from hcsr04sensor import sensor as uSensor  # untrasonic sensor
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.DEBUG)
 
@@ -76,7 +76,7 @@ class drive_me(object):
                     # Make a file-like object out of the connection
                     connection = client_socket.makefile('wb')
 
-                    # print('Sending image stream to server..')
+                    logging.debug('Sending image stream to server..')
                     with PiCamera() as camera:
                         camera.resolution = 640, 480
                         camera.framerate = self.framerate
@@ -118,8 +118,7 @@ class drive_me(object):
                         # Write a length of zero to the stream to signal we're done
                         connection.write(struct.pack('<L', 0))
             except Exception as e:
-                # print(traceback.format_exc())
-                print(e)
+                logging.exception()
                 time.sleep(10)
 
     def recevei_thread(self, client_socket, counter):

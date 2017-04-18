@@ -225,7 +225,7 @@ def act_loop():
             steer_step()
             motor_step()
             time.sleep(0.0001)
-        except ConnectionRefusedError:
+        except ValueError:
             logging.debug('Motor is not connected!')
             time.sleep(1)
 
