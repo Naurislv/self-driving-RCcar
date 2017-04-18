@@ -26,6 +26,8 @@ import RPi.GPIO as IO
 import Adafruit_ADS1x15
 import time
 import threading
+import logging
+
 
 IO.setwarnings(False)
 IO.setmode(IO.BCM)
@@ -53,17 +55,15 @@ pin_steer_left.start(0)
 adc = Adafruit_ADS1x15.ADS1015()
 ADC_GAIN = 1
 
-
 # parameters
-MOTOR_PWM_MAX          =      30
-
-STEER_MIN              =    1123   		# Steer servo min feedback value
-STEER_MAX              =     837   		# Steer servo max feedback value
-STEER_PWM_T            = 25/2.55   	# Steer servo threshold PWM abs value
-STEER_PWM_MAX          =     (255-STEER_PWM_T)/2.55   	# Steer servo max PWM abs value
-STEER_MIN_ANGLE        =   -18.0   		# Steer servo min angle value
-STEER_IDLE_ANGLE       =     0.0   		# Steer servo idle angle value
-STEER_MAX_ANGLE        =    18.0   		# Steer servo max angle value
+MOTOR_PWM_MAX = 30
+STEER_MIN = 1123  # Steer servo min feedback value
+STEER_MAX = 837  # Steer servo max feedback value
+STEER_PWM_T = 25/2.55  # Steer servo threshold PWM abs value
+STEER_PWM_MAX = (255-STEER_PWM_T)/2.55  # Steer servo max PWM abs value
+STEER_MIN_ANGLE = -18.0  # Steer servo min angle value
+STEER_IDLE_ANGLE = 0.0  # Steer servo idle angle value
+STEER_MAX_ANGLE = 18.0  # Steer servo max angle value
 
 # command functions
 running = True
@@ -80,8 +80,8 @@ goal_speed = 0
 goal_steer_angle = 0
 
 
-# goal assign functions
 def speed_goal_set(speed):
+    """goal assign functions"""
     global goal_speed
     goal_speed = speed
     return
@@ -93,19 +93,25 @@ def steer_goal_set(angle):
         angle = STEER_MAX_ANGLE
     elif (angle < STEER_MIN_ANGLE):
         angle = STEER_MIN_ANGLE
-    goal_steer_angle = angle
+        goal_steer_angle = angle
     return
 
 
-# low level main motor control
 def motor_set(motor_pwm_val):
-    if (motor_pwm_val < -MOTOR_PWM_MAX):
-        motor_pwm_val = -MOTOR_PWM_MAX
-    elif (motor_pwm_val > MOTOR_PWM_MAX):
-        motor_pwm_val = MOTOR_PWM_MAX
-
-    pwm = abs(motor_pwm_val)
-    pin_motor_fwd.ChangeDutyCycle(pwm)
+    """low level main motor control"""
+    if (motor_pwm_val > 0):
+        if (motor_pwm_val > MOTOR_PWM_MAX):
+            motor_pwm_val = MOTOR_PWM_MAX
+        pin_motor_fwd.ChangeDutyCycle(motor_pwm_val)
+        pin_motor_bwd.ChangeDutyCycle(0)
+    elif (motor_pwm_val < 0):
+        if (motor_pwm_val < -MOTOR_PWM_MAX):
+            motor_pwm_val = -MOTOR_PWM_MAX
+        pin_motor_fwd.ChangeDutyCycle(0)
+        pin_motor_bwd.ChangeDutyCycle(-motor_pwm_val)
+    else:
+        pin_motor_fwd.ChangeDutyCycle(0)
+        pin_motor_bwd.ChangeDutyCycle(0)
 
     return
 
@@ -148,9 +154,8 @@ def angle_diff(angle1, angle2):
 
 def read_steer_angle():
     return (STEER_MIN_ANGLE +
-            (STEER_MIN-adc.read_adc(0, gain=ADC_GAIN) + 0.0) /
-            (STEER_MIN-STEER_MAX) *
-            (STEER_MAX_ANGLE-STEER_MIN_ANGLE))
+            (STEER_MIN-adc.read_adc(0, gain=ADC_GAIN)+0.0) /
+            (STEER_MIN-STEER_MAX) * (STEER_MAX_ANGLE - STEER_MIN_ANGLE))
 
 
 # high-level main motor control
@@ -178,8 +183,7 @@ t_prev = 0
 
 
 def steer_step():
-    # high-level steering servo control (PID control)
-
+    """high-level steering servo control (PID control)"""
     global steer_kp
     global steer_ki
     global steer_kd
@@ -197,7 +201,7 @@ def steer_step():
     steer_e_old = steer_e
     steer_es_old = steer_es
 
-    steer_e = goal_steer_angle - read_steer_angle()  # error
+    steer_e = goal_steer_angle - read_steer_angle()     # error
 
     if (abs(steer_e) < 0.5):
         v_steer = 0
@@ -217,23 +221,27 @@ def steer_step():
 def act_loop():
     global running
     while (running):
-        steer_step()
-        motor_step()
-        time.sleep(0.0001)
+        try:
+            steer_step()
+            motor_step()
+            time.sleep(0.0001)
+        except ConnectionRefusedError:
+            logging.debug('Motor is not connected!')
+            time.sleep(1)
+
     return
 
 
 class myThread (threading.Thread):
-
     def __init__(self, threadID, name):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
 
     def run(self):
-        print("Starting: " + self.name)
+        logging.info("Starting: " + self.name)
         act_loop()
-        print("Stopping: " + self.name)
+        logging.info("Stopping: " + self.name)
 
 
 thread1 = myThread(1, "Actuator loop")
