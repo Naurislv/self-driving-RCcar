@@ -81,7 +81,7 @@ class drive_me(object):
                         camera.resolution = 640, 480
                         camera.framerate = self.framerate
                         camera.rotation = self.rotation
-                        # camera.zoom = (0.0, 0.1, 1.0, 0.65)  # x, y, w, h
+                        camera.zoom = (0.0, 0.3, 1.0, 0.455)  # x, y, w, h
 
                         # Let the camera warm up for 2 seconds
                         time.sleep(2)
