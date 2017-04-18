@@ -137,7 +137,14 @@ class server(object):
                                 self.drivers[address]['mode'] = 'autonomous'
                         clicked = time.time()
 
-                    if address != '' and self.drivers[address]['mode'] == 'train':
+                    try:
+                        mode = self.drivers[address]['mode']
+                    except KeyError:
+                        address = ''
+                        idx = 0
+                        continue
+
+                    if address != '' and mode == 'train':
                         diff_pos = steering_angle - prev_position
                         if abs(diff_pos) > 120 and diff_pos < 0:
                             adder += 255
@@ -227,7 +234,7 @@ class server(object):
 
     def check_safety(self, steering, throttle, uDistance):
 
-        if uDistance < 30:
+        if uDistance < 40:
             self.uMemory += 1
             if self.uMemory > 2:
                 return 0, 1
@@ -253,8 +260,8 @@ class server(object):
         #                      None, self.calib_params['mtx'])
 
         max_steering = 18.5  # max value passed to servo motor
-        max_speed = 20  # max value passed to servo motor
-        min_speed = 10  # min value passed to servo motor
+        max_speed = 30  # max value passed to servo motor
+        min_speed = 15  # min value passed to servo motor
 
         if self.drivers[address[0]]['mode'] == 'autonomous' and args.autonomous:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # cv2 load image as BGR, but model expects RGB
