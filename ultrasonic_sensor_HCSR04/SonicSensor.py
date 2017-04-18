@@ -1,27 +1,75 @@
-"""
-https://github.com/alaudet/hcsr04sensor
+import RPi.GPIO as GPIO  # Import GPIO library
+import time  # Import time library
+import threading
+import logging
 
-pip install -U hcsr04sensor
-"""
+GPIO.setmode(GPIO.BCM)  # Set GPIO pin numbering
 
-from hcsr04sensor import sensor
+TRIG = 24  # Associate pin 23 to TRIG
+ECHO = 23  # Associate pin 24 to ECHO
 
+logging.info("Distance measurement in progress")
 
-def main():
-    '''Calculate the distance of an object in centimeters using a HCSR04 sensor
-       and a Raspberry Pi
-     '''
+GPIO.setup(TRIG, GPIO.OUT)  # Set pin as GPIO out
+GPIO.setup(ECHO, GPIO.IN)  # Set pin as GPIO in
 
-    trig_pin = 24
-    echo_pin = 23
-    value = sensor.Measurement(trig_pin, echo_pin)
+GPIO.output(TRIG, False)  # Set TRIG as LOW
+logging.info("Waitng For 2 seconds for Sensor To Settle")
+time.sleep(2)  # Delay of 2 seconds
 
-    while (1):
-        raw_measurement = value.raw_distance(sample_size=1, sample_wait=0.001)
-        metric_distance = value.distance_metric(raw_measurement)
-        if (metric_distance <= 200):
-            print("The Distance = {} centimeters".format(metric_distance))
+meas = []  # Global list of ultrasonic sensor measurements
 
 
-if __name__ == "__main__":
-    main()
+def add_measurement(m, size=10):
+    """
+    m: measurement
+    """
+
+    meas.append(m)
+    if len(meas) > size:
+        meas.pop(0)
+
+
+def sensor_loop():
+    oor = False
+
+    while True:
+        GPIO.output(TRIG, True)  # Set TRIG as HIGH
+        time.sleep(0.0001)  # Delay of 0.00001 seconds
+        GPIO.output(TRIG, False)  # Set TRIG as LOW
+
+        while GPIO.input(ECHO) == 0:  # Check whether the ECHO is LOW
+            pulse_start = time.time()  # Saves the last known time of LOW pulse
+
+        pulse_duration = 0
+        while GPIO.input(ECHO) == 1 and pulse_duration < 0.005:  # Check whether the ECHO is HIGH
+            pulse_duration = time.time() - pulse_start  # Get pulse duration to a variable
+
+        distance = pulse_duration * 17150  # Multiply pulse duration by 17150 to get distance
+        distance = round(distance, 3)  # Round to two decimal points
+
+        if distance < 40:  # Check whether the distance is within range
+            if oor:
+                add_measurement('OoR')
+                oor = False
+            else:
+                add_measurement(distance)
+        else:
+            add_measurement('OoR')
+            oor = True
+
+
+class sensorThread(threading.Thread):
+    def __init__(self, threadID, name):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.name = name
+
+    def run(self):
+        logging.info("Starting: " + self.name)
+        sensor_loop()
+        logging.info("Stopping: " + self.name)
+
+
+thread1 = sensorThread(1, "Sensor Measurement Loop")
+thread1.start()
