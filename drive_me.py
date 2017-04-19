@@ -21,7 +21,7 @@ import logging
 import controller
 # from ultrasonic_sensor_HCSR04 import SonicSensor
 
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%d/%m/%Y %H:%M:%S', level=0)
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 
 fps = sys.argv[1]
 width = sys.argv[2]
@@ -120,6 +120,11 @@ class drive_me(object):
                 controller.steer_goal_set(0)
                 controller.speed_goal_set(0)
                 time.sleep(10)
+            except KeyboardInterrupt:
+                logging.info('Setting steer and speed to 0.')
+                controller.steer_goal_set(0)
+                controller.speed_goal_set(0)
+                break
 
     def recevei_thread(self, client_socket, counter):
         """Receive asnwer from server."""
