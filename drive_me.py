@@ -19,7 +19,7 @@ import time
 import logging
 
 import controller
-from ultrasonic_sensor_HCSR04 import SonicSensor
+# from ultrasonic_sensor_HCSR04 import SonicSensor
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%d/%m/%Y %H:%M:%S', level=0)
 
@@ -30,7 +30,8 @@ height = sys.argv[3]
 
 def uDistance():
     """Return ultrasonic sensor HCSR04 measurement data converted to centimeters."""
-    return SonicSensor.meas[-1]
+    # return SonicSensor.meas[-1]
+    return 0
 
 
 class drive_me(object):
