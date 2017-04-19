@@ -106,6 +106,7 @@ class server(object):
                             addresses = sorted(list(self.drivers.keys()))  # get all 1 level keys (addresses)
                             try:
                                 address = addresses[idx]
+                                constant_speed = 0  # to zero when selecting new driver
                                 logging.info('Selecting {} to drive'.format(address))
 
                                 idx += 1
@@ -144,10 +145,12 @@ class server(object):
                         diff = start_time - clicked
                         if diff > 0.3:
                             constant_speed += 1
+                        clicked = time.time()
                     elif controls_1 == 128 and address != '':
                         diff = start_time - clicked
                         if diff > 0.3:
                             constant_speed -= 1
+                        clicked = time.time()
 
                     try:
                         mode = self.drivers[address]['mode']
@@ -165,6 +168,9 @@ class server(object):
 
                         position = steering_angle - pos_0 + adder
                         prev_position = steering_angle
+
+                        if brakes < 255:
+                            constant_speed = 0  # to reset constant_speed to 0
 
                         if constant_speed == 0:
                             self.drivers[address]['commands'] = (False, position, 255 - throttle, 255 - brakes)
@@ -272,7 +278,7 @@ class server(object):
 
         max_steering = 18.5  # max value passed to servo motor
         max_speed = 30  # max value passed to servo motor
-        min_speed = 15  # min value passed to servo motor
+        min_speed = 3  # min value passed to servo motor
 
         if self.drivers[address[0]]['mode'] == 'autonomous' and args.autonomous:
             # cv2 load image as BGR, but model expects RGB and crop center image

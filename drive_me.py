@@ -117,13 +117,11 @@ class drive_me(object):
 
                 # After crash always se steer and speed to 0 so no phycal crash could occur
                 logging.info('Setting steer and speed to 0.')
-                controller.steer_goal_set(0)
-                controller.speed_goal_set(0)
+                controller.halt()
                 time.sleep(10)
             except KeyboardInterrupt:
                 logging.info('Setting steer and speed to 0.')
-                controller.steer_goal_set(0)
-                controller.speed_goal_set(0)
+                controller.halt()
                 break
 
     def recevei_thread(self, client_socket, counter):
