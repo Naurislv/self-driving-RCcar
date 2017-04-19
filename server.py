@@ -39,8 +39,9 @@ class server(object):
         # Start a socket listening for connections on 0.0.0.0:8000 (0.0.0.0 means
         # all interfaces)
 
-        # with open('/home/nauris/Dropbox/lu_master/Maģistra Darbs/calib_images/wide_dist_pickle.p', 'rb') as f:
-        #     self.calib_params = pickle.load(f)  # calibration parameters for undistortion
+        with open('calib.p', 'rb') as f:
+            self.calib_params = pickle.load(f)   # calibration parameters for undistortion
+        logging.info('Calibration parameters loaded.')
 
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -85,16 +86,20 @@ class server(object):
             idx = 0
             address = ''
             clicked = 0
+            constant_speed = 0
+
             while True:
                 try:
                     start_time = time.time()
                     data = dev.read(endpoint.bEndpointAddress,
                                     endpoint.wMaxPacketSize)
                     controls_0 = data[1]
+                    controls_1 = data[2]
                     steering_angle = data[3]
                     throttle = data[5]
                     brakes = data[6]
                     # clutch = data[7]
+
                     if controls_0 == 1:
                         diff = start_time - clicked
                         if diff > 0.3:
@@ -135,6 +140,14 @@ class server(object):
                                 self.drivers[address]['speed'] = 0
                                 self.drivers[address]['mode'] = 'autonomous'
                         clicked = time.time()
+                    elif controls_1 == 64 and address != '':
+                        diff = start_time - clicked
+                        if diff > 0.3:
+                            constant_speed += 1
+                    elif controls_1 == 128 and address != '':
+                        diff = start_time - clicked
+                        if diff > 0.3:
+                            constant_speed -= 1
 
                     try:
                         mode = self.drivers[address]['mode']
@@ -153,7 +166,10 @@ class server(object):
                         position = steering_angle - pos_0 + adder
                         prev_position = steering_angle
 
-                        self.drivers[address]['commands'] = (position, 255 - throttle, 255 - brakes)
+                        if constant_speed == 0:
+                            self.drivers[address]['commands'] = (False, position, 255 - throttle, 255 - brakes)
+                        else:
+                            self.drivers[address]['commands'] = (True, position, constant_speed, 255 - brakes)
 
                 except usb.core.USBError as e:
                     data = None
@@ -163,7 +179,7 @@ class server(object):
     def read_images(self, clientsocket, address):
         """Read images in loop directly from connection."""
         self.drivers[address[0]] = {}
-        self.drivers[address[0]]['commands'] = (0, 0, 0)
+        self.drivers[address[0]]['commands'] = (False, 0, 0, 0)
         self.drivers[address[0]]['save'] = False
         self.drivers[address[0]]['mode'] = 'testing'
 
@@ -206,7 +222,7 @@ class server(object):
         del self.drivers[address[0]]
         connection.close()
         clientsocket.close()
-        logging.info('connection closed')
+        logging.info('connection closed {}'.format(address[0]))
 
     def steering_angle(self, steering, max_steering, adjust_output=None):
         """Convert steering values to normalized steering angle."""
@@ -252,7 +268,7 @@ class server(object):
         uDistance = data['uDistance']  # Ultrasonic sensor measurements in cm
 
         # image = cv2.undistort(image, self.calib_params['mtx'], self.calib_params['dist'],
-        #                      None, self.calib_params['mtx'])
+        #                       None, self.calib_params['mtx'])
 
         max_steering = 18.5  # max value passed to servo motor
         max_speed = 30  # max value passed to servo motor
@@ -265,8 +281,9 @@ class server(object):
                 steering = float(model.predict(image[None, :, :, :], batch_size=1)[0, 0] * max_steering + 10)
                 throttle = float(self.driving_speed(address[0], 0.08, max_speed))
         else:
-            steering, throttle, brakes = self.drivers[address[0]]['commands']
-            if brakes == 0:
+            const_speed, steering, throttle, brakes = self.drivers[address[0]]['commands']
+
+            if brakes == 0 and not const_speed:
                 throttle_noise = 52  # expect throttle to be from 0 .. 255
                 if throttle <= 52:
                     # to remove fluctuactions when clutch is not completely relaxed
@@ -275,6 +292,8 @@ class server(object):
                     # now throttle will be from min_speed ... max_speed
                     throttle = (throttle - throttle_noise) / (255 - throttle_noise)
                     throttle = throttle * (max_speed - min_speed) + min_speed
+            elif brakes == 0 and const_speed:
+                pass  # use constant speed as is
             else:
                 throttle = -brakes / 255 * max_speed
 

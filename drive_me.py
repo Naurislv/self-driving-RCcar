@@ -73,10 +73,11 @@ class drive_me(object):
 
                     logging.debug('Sending image stream to server..')
                     with PiCamera() as camera:
-                        camera.resolution = 640, 480
+                        # resize image to closest resolution and then to get this resolution
+                        camera.resolution = self.resolution
                         camera.framerate = self.framerate
                         camera.rotation = self.rotation
-                        camera.zoom = (0.0, 0.3, 1.0, 0.455)  # x, y, w, h
+                        # camera.zoom = (0.0, 0.3, 1.0, 0.455)  # x, y, w, h
 
                         # Let the camera warm up for 2 seconds
                         time.sleep(2)
@@ -88,8 +89,7 @@ class drive_me(object):
                         stream = io.BytesIO()
                         counter = 0
 
-                        for foo in camera.capture_continuous(stream, 'jpeg', use_video_port=True,
-                                                             resize=self.resolution):
+                        for foo in camera.capture_continuous(stream, 'jpeg', use_video_port=True):
                             # Write the length of the capture to the stream and flush to
                             # ensure it actually gets sent
                             stream.seek(0)
