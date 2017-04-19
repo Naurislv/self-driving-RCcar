@@ -48,7 +48,6 @@ class server(object):
         server_socket.listen(0)
 
         self.drivers = {}
-        self.uMemory = 0  # Ultrasonic sensor measurement memory
 
         threading.Thread(target=self.instructor_G27).start()
         while True:
@@ -235,11 +234,7 @@ class server(object):
     def check_safety(self, steering, throttle, uDistance):
 
         if uDistance < 40:
-            self.uMemory += 1
-            if self.uMemory > 2:
-                return 0, 1
-        else:
-            self.uMemory = 0
+            return 0, 1
 
         return steering, throttle
 

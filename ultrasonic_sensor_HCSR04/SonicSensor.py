@@ -35,18 +35,19 @@ def sensor_loop():
 
     while True:
         GPIO.output(TRIG, True)  # Set TRIG as HIGH
-        time.sleep(0.0001)  # Delay of 0.00001 seconds
+        time.sleep(0.00001)  # Delay of 0.00001 seconds
         GPIO.output(TRIG, False)  # Set TRIG as LOW
 
         while GPIO.input(ECHO) == 0:  # Check whether the ECHO is LOW
-            pulse_start = time.time()  # Saves the last known time of LOW pulse
+            pass
+        pulse_start = time.time()  # Saves the last known time of LOW pulse
 
-        pulse_duration = 0
-        while GPIO.input(ECHO) == 1 and pulse_duration < 0.005:  # Check whether the ECHO is HIGH
-            pulse_duration = time.time() - pulse_start  # Get pulse duration to a variable
+        while GPIO.input(ECHO) == 1:  # Check whether the ECHO is HIGH
+            pass
 
+        pulse_duration = time.time() - pulse_start
         distance = pulse_duration * 17150  # Multiply pulse duration by 17150 to get distance
-        distance = round(distance, 3)  # Round to two decimal points
+        distance = round(distance, 2)  # Round to two decimal points
 
         if distance < 40:  # Check whether the distance is within range
             if oor:
@@ -57,8 +58,6 @@ def sensor_loop():
         else:
             add_measurement(999)
             oor = True
-
-        time.sleep(0.01)
 
 
 class sensorThread(threading.Thread):

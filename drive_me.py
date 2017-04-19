@@ -21,7 +21,7 @@ import logging
 import controller
 from ultrasonic_sensor_HCSR04 import SonicSensor
 
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%d/%m/%Y %H:%M:%S', level=0)
 
 fps = sys.argv[1]
 width = sys.argv[2]
@@ -112,7 +112,7 @@ class drive_me(object):
                         # Write a length of zero to the stream to signal we're done
                         connection.write(struct.pack('<L', 0))
             except Exception as e:
-                logging.exception()
+                logging.exception(e)
                 time.sleep(10)
 
     def recevei_thread(self, client_socket, counter):
