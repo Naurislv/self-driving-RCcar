@@ -11,10 +11,10 @@ Self-driving Radio Controlled car is powered by Raspberry Pi so some part of cod
 
 Delta compression using up to 8 threads.
 
-Self Driving Car prototype
+### Self Driving Car prototype
 ![alt text][image1]
 
-Correct FishEye lense distortion.
+### Correct FishEye lense distortion.
 ![alt text][image2]
 ![alt text][image3]
 ![alt text][image4]
