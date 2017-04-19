@@ -116,6 +116,7 @@ class drive_me(object):
                 logging.exception(e)
 
                 # After crash always se steer and speed to 0 so no phycal crash could occur
+                logging.info('Setting steer and speed to 0.')
                 controller.steer_goal_set(0)
                 controller.speed_goal_set(0)
                 time.sleep(10)
