@@ -267,15 +267,16 @@ class server(object):
         image = cv2.imdecode(np.fromstring(data['image'], np.uint8), 1)  # image to be saved
         uDistance = data['uDistance']  # Ultrasonic sensor measurements in cm
 
-        # image = cv2.undistort(image, self.calib_params['mtx'], self.calib_params['dist'],
-        #                       None, self.calib_params['mtx'])
+        image = cv2.undistort(image, self.calib_params['mtx'], self.calib_params['dist'],
+                              None, self.calib_params['mtx'])
 
         max_steering = 18.5  # max value passed to servo motor
         max_speed = 30  # max value passed to servo motor
         min_speed = 15  # min value passed to servo motor
 
         if self.drivers[address[0]]['mode'] == 'autonomous' and args.autonomous:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # cv2 load image as BGR, but model expects RGB
+            # cv2 load image as BGR, but model expects RGB and crop center image
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)[:, 40:240]
 
             with graph.as_default():
                 steering = float(model.predict(image[None, :, :, :], batch_size=1)[0, 0] * max_steering + 10)
@@ -316,7 +317,7 @@ class server(object):
                 "\nIP: {}\nShape: {}").format(fps, round(network_latency, 3) * 1000,
                                               round(processing_time, 3) * 1000, address, imshape)
 
-        new_width = 1200
+        new_width = 1500
         new_hight = imshape[0] * new_width // imshape[1]
         im_resized = cv2.resize(image, (new_width, new_hight))
 
@@ -351,7 +352,17 @@ class server(object):
         elif counter < 10000:
             add = '00'
 
-        cv2.imwrite(working_dir + to_dir + '/{}_{}.jpeg'.format(add + str(counter), instruction), image)
+        # cv2.imwrite(working_dir + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
+        #                                                            'C', instruction), image)
+        # im_left
+        cv2.imwrite(working_dir + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
+                                                                   'L', instruction), image[:, 0:200])
+        # im_center
+        cv2.imwrite(working_dir + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
+                                                                   'C', instruction), image[:, 40:240])
+        # im_right
+        cv2.imwrite(working_dir + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
+                                                                   'R', instruction), image[:, 80:280])
 
 
 if __name__ == "__main__":

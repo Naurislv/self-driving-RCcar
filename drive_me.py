@@ -114,6 +114,10 @@ class drive_me(object):
                         connection.write(struct.pack('<L', 0))
             except Exception as e:
                 logging.exception(e)
+
+                # After crash always se steer and speed to 0 so no phycal crash could occur
+                controller.steer_goal_set(0)
+                controller.speed_goal_set(0)
                 time.sleep(10)
 
     def recevei_thread(self, client_socket, counter):
