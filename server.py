@@ -233,8 +233,8 @@ class server(object):
 
     def check_safety(self, steering, throttle, uDistance):
 
-        if uDistance < 40:
-            return 0, 1
+        # if uDistance < 40:
+        #     return 0, 1
 
         return steering, throttle
 
