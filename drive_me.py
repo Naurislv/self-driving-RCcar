@@ -98,7 +98,8 @@ class drive_me(object):
                             ans = self.server_time[counter]['server_time'] - time.time() - cp
 
                             # System Load. CPU load per core and memory usage.
-                            sys_load = psutil.cpu_percent(percpu=True).append(psutil.virtual_memory().percent)
+                            cpu_load = psutil.cpu_percent(percpu=True)
+                            sys_load = cpu_load.append(psutil.virtual_memory().percent)
 
                             data_string = pickle.dumps({'image': stream.read(),
                                                         'client_time': ans,
