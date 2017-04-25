@@ -272,6 +272,7 @@ class server(object):
         start_time = time.time()
         image = cv2.imdecode(np.fromstring(data['image'], np.uint8), 1)  # image to be saved
         uDistance = data['uDistance']  # Ultrasonic sensor measurements in cm
+        sys_load = data['sys_load']  # Client CPU load
 
         image = cv2.undistort(image, self.calib_params['mtx'], self.calib_params['dist'],
                               None, self.calib_params['mtx'])
@@ -312,16 +313,19 @@ class server(object):
 
         processing_time = time.time() - start_time
         threading.Thread(target=self.display_image, args=(image, address[0], processing_time, network_latency,
-                                                          steering, throttle, fps, counter, uDistance)).start()
+                                                          steering, throttle, fps, counter, uDistance,
+                                                          sys_load)).start()
 
     def display_image(self, image, address, processing_time, network_latency,
-                      steering, throttle, fps, counter, uDistance):
+                      steering, throttle, fps, counter, uDistance, sys_load):
         """"Display image alongside with necessary information with cv2."""
         imshape = image.shape
         text = ("FPS: {}\nNetwork: {}ms"
                 "\nImage processing: {}ms"
-                "\nIP: {}\nShape: {}").format(fps, round(network_latency, 3) * 1000,
-                                              round(processing_time, 3) * 1000, address, imshape)
+                "\nIP: {}\nShape: {}\n"
+                "sys_load: {}").format(fps, round(network_latency, 3) * 1000,
+                                       round(processing_time, 3) * 1000, address,
+                                       imshape, sys_load)
 
         new_width = 1500
         new_hight = imshape[0] * new_width // imshape[1]
@@ -333,9 +337,9 @@ class server(object):
             y = y0 + i * dy
             cv2.putText(im_resized, t, (10, y), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-        cv2.putText(im_resized, 'angle: ' + str(steering), (10, 120), font, 0.7, (0, 153, 76), 1, cv2.LINE_AA)
-        cv2.putText(im_resized, 'speed: ' + str(throttle), (10, 150), font, 0.7, (0, 128, 255), 1, cv2.LINE_AA)
-        cv2.putText(im_resized, 'collision: ' + str(uDistance), (10, 180), font, 0.7, (255, 0, 0), 1, cv2.LINE_AA)
+        cv2.putText(im_resized, 'angle: ' + str(steering), (10, 135), font, 0.7, (0, 153, 76), 1, cv2.LINE_AA)
+        cv2.putText(im_resized, 'speed: ' + str(throttle), (10, 165), font, 0.7, (0, 128, 255), 1, cv2.LINE_AA)
+        cv2.putText(im_resized, 'collision: ' + str(uDistance), (10, 195), font, 0.7, (255, 0, 0), 1, cv2.LINE_AA)
 
         cv2.startWindowThread()
         cv2.namedWindow(address)

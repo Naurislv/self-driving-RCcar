@@ -17,6 +17,7 @@ import sys
 import threading
 import time
 import logging
+import psutil
 
 import controller
 # from ultrasonic_sensor_HCSR04 import SonicSensor
@@ -97,9 +98,13 @@ class drive_me(object):
                             cp = self.server_time[counter]['client_process']
                             ans = self.server_time[counter]['server_time'] - time.time() - cp
 
+                            # System Load. CPU load per core and memory usage.
+                            sys_load = psutil.cpu_percent(percpu=True).append(psutil.virtual_memory().percent)
+
                             data_string = pickle.dumps({'image': stream.read(),
                                                         'client_time': ans,
-                                                        'uDistance': uDistance()})
+                                                        'uDistance': uDistance(),
+                                                        'sys_load': sys_load})
 
                             connection.write(struct.pack('<L', len(data_string)))
                             connection.flush()

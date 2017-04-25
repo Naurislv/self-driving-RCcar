@@ -75,7 +75,7 @@ def gaussian(size, sig, min_val=3, max_val=20):
     return dist[dist > min_val]
 
 
-impulse_dist = gaussian(40, 0.3, min_val=3, max_val=20)
+impulse_dist = gaussian(30, 0.3, min_val=4, max_val=20)
 
 
 class act_loop(object):
@@ -114,14 +114,13 @@ class act_loop(object):
     def halt(self):
         self.running = False
 
-    def starting_impulse(self):
-        """Return starting impulse or False if not necesarry."""
-        return False
-
     def speed_goal_set(self, speed):
         """Set New goal for speed and check if starting_impulse is necesarry."""
         if self.goal_speed == 0 and speed > 0:
             self.impulse = impulse_dist
+
+        if 0 < speed < 4:
+            speed = 4
 
         self.goal_speed = speed
 
