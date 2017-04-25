@@ -77,7 +77,7 @@ def gaussian(size, sig, min_val=3, max_val=20):
     return dist[dist > min_val]
 
 
-impulse_dist = gaussian(30, 0.3, min_val=4, max_val=30)
+impulse_dist = gaussian(350, 0.3, min_val=4, max_val=30)
 logging.info('Impulse Dist {}'.format(impulse_dist))
 
 
@@ -129,8 +129,8 @@ class DriverController(object):
         if self.goal_speed == 0 and speed > 0:
             self.impulse = impulse_dist
 
-        if 0 < speed < 4:
-            speed = 4
+        if 0 < speed < 8.25:
+            speed = 8.25
 
         self.goal_speed = speed
 
