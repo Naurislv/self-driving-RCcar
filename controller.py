@@ -78,7 +78,7 @@ def gaussian(size, sig, min_val=3, max_val=20):
 impulse_dist = gaussian(30, 0.3, min_val=4, max_val=20)
 
 
-class act_loop(object):
+class DriverController(object):
 
     def __init__(self):
         # goal values to set externally
@@ -87,7 +87,6 @@ class act_loop(object):
         self.impulse = []
 
         self.running = True
-        self.act_loop()
 
     def act_loop(self):
 
@@ -213,6 +212,13 @@ class act_loop(object):
             # print("----","----")
 
 
+# Initialize DriverController class
+Driver = DriverController()
+speed_goal_set = Driver.speed_goal_set
+steer_goal_set = Driver.steer_goal_set
+halt = Driver.halt
+
+
 class myThread(threading.Thread):
     def __init__(self, threadID, name):
         threading.Thread.__init__(self)
@@ -221,7 +227,7 @@ class myThread(threading.Thread):
 
     def run(self):
         logging.info("Starting: " + self.name)
-        self.act_loop()
+        Driver.act_loop()
         logging.info("Stopping: " + self.name)
 
 
