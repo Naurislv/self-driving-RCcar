@@ -93,20 +93,23 @@ class DriverController(object):
 
     def act_loop(self):
 
-        while self.running:
+        while True:
             try:
-                self.steer_step(self.goal_steer_angle)
-                goal_speed = self.goal_speed
+                if self.running:
+                    self.steer_step(self.goal_steer_angle)
+                    goal_speed = self.goal_speed
 
-                if len(self.impulse) > 0:
-                    if goal_speed < self.impulse[0]:
-                        goal_speed = self.impulse[0]  # add starting impulse to goal speed
-                    self.impulse = np.delete(self.impulse, 0)  # one by one remove impulse values until it's empty list
+                    if len(self.impulse) > 0:
+                        if goal_speed < self.impulse[0]:
+                            goal_speed = self.impulse[0]  # add starting impulse to goal speed
 
-                self.motor_step(goal_speed)
-                time.sleep(0.0001)
-            except ValueError as e:
-                time.sleep(1)
+                        # one by one remove impulse values until it's empty list
+                        self.impulse = np.delete(self.impulse, 0)
+
+                    self.motor_step(goal_speed)
+                    time.sleep(0.0001)
+                else:
+                    time.sleep(1)
             except Exception as e:
                 logging.exception(e)
                 break
