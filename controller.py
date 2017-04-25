@@ -89,7 +89,7 @@ class DriverController(object):
         self.goal_steer_angle = 0
         self.impulse = []
 
-        self.running = True
+        self.running = False
 
     def act_loop(self):
 
@@ -116,6 +116,9 @@ class DriverController(object):
 
     def halt(self):
         self.running = False
+
+    def start(self):
+        self.running = True
 
     def speed_goal_set(self, speed):
         """Set New goal for speed and check if starting_impulse is necesarry."""
@@ -221,6 +224,7 @@ Driver = DriverController()
 speed_goal_set = Driver.speed_goal_set
 steer_goal_set = Driver.steer_goal_set
 halt = Driver.halt
+start = Driver.start
 
 
 class myThread(threading.Thread):

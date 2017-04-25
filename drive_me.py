@@ -70,7 +70,8 @@ class drive_me(object):
                     # Make a file-like object out of the connection
                     connection = client_socket.makefile('wb')
 
-                    logging.debug('Sending image stream to server..')
+                    logging.info('Sending image stream to server and starting motor driver..')
+                    controller.start()
                     with PiCamera() as camera:
                         # resize image to closest resolution and then to get this resolution
                         camera.resolution = self.resolution
@@ -117,9 +118,8 @@ class drive_me(object):
                         connection.write(struct.pack('<L', 0))
             except Exception as e:
                 logging.exception(e)
-
                 # After crash always se steer and speed to 0 so no phycal crash could occur
-                logging.info('Setting steer and speed to 0.')
+                logging.info('Halt!, Setting steer and speed to 0.')
                 controller.halt()
                 time.sleep(10)
             except KeyboardInterrupt:
