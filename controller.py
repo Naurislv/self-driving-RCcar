@@ -96,16 +96,17 @@ class DriverController(object):
 
                 goal_speed = self.goal_speed
 
-                if len(self.impulse) != 0:
+                if len(self.impulse) > 0:
                     if goal_speed < self.impulse[0]:
                         goal_speed = self.impulse[0]  # add starting impulse to goal speed
-                    self.impulse.pop(0)  # one by one remove impulse values until it's empy list
+                    self.impulse = np.delete(self.impulse, 0)  # one by one remove impulse values until it's empty list
 
                 self.motor_step(goal_speed)
                 time.sleep(0.0001)
             except ValueError:
                 logging.debug('Motor is not connected!')
                 time.sleep(1)
+                break
 
         self.speed_goal_set(0)
         self.steer_goal_set(0)
