@@ -19,7 +19,7 @@ import time
 import psutil
 import controller
 
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 # from ultrasonic_sensor_HCSR04 import SonicSensor
 
 fps = sys.argv[1]

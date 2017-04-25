@@ -78,6 +78,7 @@ def gaussian(size, sig, min_val=3, max_val=20):
 
 
 impulse_dist = gaussian(30, 0.3, min_val=4, max_val=30)
+logging.info('Impulse Dist {}'.format(impulse_dist))
 
 
 class DriverController(object):
@@ -95,7 +96,6 @@ class DriverController(object):
         while self.running:
             try:
                 self.steer_step(self.goal_steer_angle)
-
                 goal_speed = self.goal_speed
 
                 if len(self.impulse) > 0:
@@ -105,12 +105,12 @@ class DriverController(object):
 
                 self.motor_step(goal_speed)
                 time.sleep(0.0001)
-            except ValueError:
-                logging.info('Motor is not connected!')
+            except ValueError as e:
+                logging.exception('Exception')
                 time.sleep(1)
                 break
 
-        logging.info('Set speed goal and steer goal to 0')
+        logging.info('Stop Work. Set speed goal and steer goal to 0')
         self.speed_goal_set(0)
         self.steer_goal_set(0)
 
