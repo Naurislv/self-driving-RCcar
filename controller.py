@@ -106,8 +106,9 @@ class DriverController(object):
                 self.motor_step(goal_speed)
                 time.sleep(0.0001)
             except ValueError as e:
-                logging.exception('Exception')
                 time.sleep(1)
+            except Exception as e:
+                logging.exception(e)
                 break
 
         logging.info('Stop Work. Set speed goal and steer goal to 0')
