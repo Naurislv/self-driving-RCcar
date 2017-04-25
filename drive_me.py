@@ -6,7 +6,7 @@ sudo crontab -e
 @reboot bash /home/pi/self-driving-RCcar/launcher.sh >/home/pi/self-driving-RCcar/logs/cronlog 2>&1
 
 """
-
+import logging
 import io
 import os
 from picamera import PiCamera
@@ -16,13 +16,11 @@ import struct
 import sys
 import threading
 import time
-import logging
 import psutil
-
 import controller
-# from ultrasonic_sensor_HCSR04 import SonicSensor
 
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.DEBUG)
+# from ultrasonic_sensor_HCSR04 import SonicSensor
 
 fps = sys.argv[1]
 width = sys.argv[2]

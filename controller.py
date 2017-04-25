@@ -29,6 +29,8 @@ import threading
 import logging
 import numpy as np
 
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+
 
 IO.setwarnings(False)
 IO.setmode(IO.BCM)
@@ -69,13 +71,13 @@ STEER_MAX_ANGLE = 18.0  # Steer servo max angle value
 
 def gaussian(size, sig, min_val=3, max_val=20):
     mu = 0
-    x = np.linspace(mu - 0.1, 0.3, size)
+    x = np.linspace(mu - 0.15, 2, size)
     dist = np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.))) * max_val
 
     return dist[dist > min_val]
 
 
-impulse_dist = gaussian(30, 0.3, min_val=4, max_val=20)
+impulse_dist = gaussian(30, 0.3, min_val=4, max_val=30)
 
 
 class DriverController(object):
@@ -104,10 +106,11 @@ class DriverController(object):
                 self.motor_step(goal_speed)
                 time.sleep(0.0001)
             except ValueError:
-                logging.debug('Motor is not connected!')
+                logging.info('Motor is not connected!')
                 time.sleep(1)
                 break
 
+        logging.info('Set speed goal and steer goal to 0')
         self.speed_goal_set(0)
         self.steer_goal_set(0)
 
