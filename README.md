@@ -11,6 +11,9 @@ Self-driving Radio Controlled car is powered by Raspberry Pi so some part of cod
 
 Delta compression using up to 8 threads.
 
+### First drive in first track
+[Video](https://www.youtube.com/watch?v=cWWS8glTW00)
+
 ### Self Driving Car prototype
 ![alt text][image1]
 
