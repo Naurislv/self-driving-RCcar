@@ -16,7 +16,7 @@ import usb.core
 import usb.util
 import logging
 
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', 18level=logging.INFO)
 
 parser = argparse.ArgumentParser(description='Autonomous Driving Server')
 parser.add_argument('--autonomous', type=bool, default=False,
@@ -277,7 +277,7 @@ class server(object):
         image = cv2.undistort(image, self.calib_params['mtx'], self.calib_params['dist'],
                               None, self.calib_params['mtx'])
 
-        max_steering = 18.5  # max value passed to servo motor
+        max_steering = 19  # max value passed to servo motor
         max_speed = 30  # max value passed to servo motor
         min_speed = 3  # min value passed to servo motor
 

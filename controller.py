@@ -64,9 +64,9 @@ STEER_MIN = 1123  # Steer servo min feedback value
 STEER_MAX = 837  # Steer servo max feedback value
 STEER_PWM_T = 25 / 2.55  # Steer servo threshold PWM abs value
 STEER_PWM_MAX = (255 - STEER_PWM_T) / 2.55  # Steer servo max PWM abs value
-STEER_MIN_ANGLE = -18.0  # Steer servo min angle value
+STEER_MIN_ANGLE = -19.0  # Steer servo min angle value
 STEER_IDLE_ANGLE = 0.0  # Steer servo idle angle value
-STEER_MAX_ANGLE = 18.0  # Steer servo max angle value
+STEER_MAX_ANGLE = 19.0  # Steer servo max angle value
 
 
 def gaussian(size, sig, min_val=3, max_val=20):
