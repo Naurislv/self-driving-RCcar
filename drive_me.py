@@ -101,7 +101,7 @@ class drive_me(object):
                             cpu_load = psutil.cpu_percent(percpu=True)
                             mem_load = psutil.virtual_memory().percent
                             sys_load = [mem_load] + cpu_load
-                            print(sys_load)
+
                             data_string = pickle.dumps({'image': stream.read(),
                                                         'client_time': ans,
                                                         'uDistance': uDistance(),
