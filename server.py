@@ -337,7 +337,7 @@ class server(object):
             y = y0 + i * dy
             cv2.putText(im_resized, t, (10, y), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-        cv2.putText(im_resized, 'angle: ' + str(steering), (10, 135), font, 0.7, (0, 153, 76), 1, cv2.LINE_AA)
+        cv2.putText(im_resized, 'angle: ' + str(steering), (10, 135), font, 0.7, (0, 0, 255), 1, cv2.LINE_AA)
         cv2.putText(im_resized, 'speed: ' + str(throttle), (10, 165), font, 0.7, (0, 128, 255), 1, cv2.LINE_AA)
         cv2.putText(im_resized, 'collision: ' + str(uDistance), (10, 195), font, 0.7, (255, 0, 0), 1, cv2.LINE_AA)
 
