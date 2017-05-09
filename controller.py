@@ -131,8 +131,8 @@ class DriverController(object):
 
         # if 0 < speed < 8.25:
         #     speed = 8.25
-        if 0 < speed < 7:
-            speed = 7
+        if 0 < speed < 7.5:
+            speed = 7.5
 
         self.goal_speed = speed
 
