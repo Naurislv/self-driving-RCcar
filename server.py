@@ -159,7 +159,7 @@ class server(object):
                         idx = 0
                         continue
 
-                    if address != '' and mode == 'train':
+                    if address != '' and mode != 'testing':
                         diff_pos = steering_angle - prev_position
                         if abs(diff_pos) > 120 and diff_pos < 0:
                             adder += 255
@@ -176,6 +176,8 @@ class server(object):
                             self.drivers[address]['commands'] = (False, position, 255 - throttle, 255 - brakes)
                         else:
                             self.drivers[address]['commands'] = (True, position, constant_speed, 255 - brakes)
+                    elif address == '':
+                        mode = 'testing'
 
                 except usb.core.USBError as e:
                     data = None
@@ -243,15 +245,26 @@ class server(object):
         else:
             return output * adjust_output
 
-    def driving_speed(self, address, throttle, max_speed):
-        """Convert throttle values to normalized driving speed."""
+    def driving_cmd(self, address, min_speed, max_speed, max_steering):
+        const_speed, steering, throttle, brakes = self.drivers[address[0]]['commands']
 
-        self.drivers[address]['speed'] += 1 * throttle
+        if brakes == 0 and not const_speed:
+            throttle_noise = 52  # expect throttle to be from 0 .. 255
+            if throttle <= 52:
+                # to remove fluctuactions when clutch is not completely relaxed
+                throttle = 0
+            else:
+                # now throttle will be from min_speed ... max_speed
+                throttle = (throttle - throttle_noise) / (255 - throttle_noise)
+                throttle = throttle * (max_speed - min_speed) + min_speed
+        elif brakes == 0 and const_speed:
+            pass  # use constant speed as is
+        else:
+            throttle = -brakes / 255 * max_speed
 
-        if self.drivers[address]['speed'] > max_speed:
-            return max_speed
+        steering = self.steering_angle(steering, 10000, max_steering)
 
-        return self.drivers[address]['speed']
+        return throttle, steering
 
     def check_safety(self, steering, throttle, uDistance):
 
@@ -279,35 +292,18 @@ class server(object):
 
         max_steering = 20  # max value passed to servo motor
         max_speed = 30  # max value passed to servo motor
-        min_speed = 3  # min value passed to servo motor
+        min_speed = 5  # min value passed to servo motor, this needs to be handled here because of pedal fluctuactions
+
+        throttle, steering = self.driving_cmd(address, min_speed, max_speed, max_steering)
 
         if self.drivers[address[0]]['mode'] == 'autonomous' and args.autonomous:
             # cv2 load image as BGR, but model expects RGB and crop center image
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)[:, 40:240]
 
             with graph.as_default():
-                steering = float(model.predict(image[None, :, :, :], batch_size=1)[0, 0] * max_steering + 10)
-                throttle = float(self.driving_speed(address[0], 0.08, max_speed))
-        else:
-            const_speed, steering, throttle, brakes = self.drivers[address[0]]['commands']
+                steering = float(model.predict(image[None, :, :, :], batch_size=1)[0, 0] * max_steering)
 
-            if brakes == 0 and not const_speed:
-                throttle_noise = 52  # expect throttle to be from 0 .. 255
-                if throttle <= 52:
-                    # to remove fluctuactions when clutch is not completely relaxed
-                    throttle = 0
-                else:
-                    # now throttle will be from min_speed ... max_speed
-                    throttle = (throttle - throttle_noise) / (255 - throttle_noise)
-                    throttle = throttle * (max_speed - min_speed) + min_speed
-            elif brakes == 0 and const_speed:
-                pass  # use constant speed as is
-            else:
-                throttle = -brakes / 255 * max_speed
-
-            steering = self.steering_angle(steering, 10000, max_steering)
-
-        steering, throttle = self.check_safety(steering, throttle, uDistance)  # Safety system. Avoid collisions etc.
+        # steering, throttle = self.check_safety(steering, throttle, uDistance)  # Safety system. Avoid collisions etc.
         clientsocket.sendall(pickle.dumps({'counter': counter, 'server_time': time.time(),
                                            'instruction': (steering, throttle)}))
 
