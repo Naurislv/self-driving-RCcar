@@ -19,7 +19,6 @@ import time
 import psutil
 import controller
 
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 # from ultrasonic_sensor_HCSR04 import SonicSensor
 
 fps = sys.argv[1]
@@ -39,7 +38,7 @@ class drive_me(object):
     def __init__(self):
         """Inicilize class variables."""
         # Connect a client socket to my_server:8000
-        self.my_servers = ['192.168.10.254']  # '192.168.1.230'
+        self.my_servers = ['192.168.1.180']  # '192.168.1.230'
         self.resolution = (int(width), int(height))  # 640,480 ; 320,200 ; 200, 66
         self.framerate = int(fps)
         self.rotation = 0
@@ -136,8 +135,8 @@ class drive_me(object):
             data = pickle.loads(client_socket.recv(1024))  # receive instructions from server
 
             steering, throttle = data['instruction']
-            controller.steer_goal_set(steering)
-            controller.speed_goal_set(throttle)
+            # controller.steer_goal_set(steering)
+            # controller.speed_goal_set(throttle)
 
             self.server_time[counter + 1] = {}  # starts from 1
             self.server_time[counter + 1]['client_process'] = time.time()
@@ -148,5 +147,7 @@ class drive_me(object):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+
     brain = drive_me()
     brain.drive()
