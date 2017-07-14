@@ -82,6 +82,7 @@ logging.info('Impulse Dist {}'.format(impulse_dist))
 
 
 class DriverController(object):
+    """Controller/Driver class which is specificly written to control specific hardware."""
 
     def __init__(self):
         # goal values to set externally
