@@ -1,37 +1,38 @@
 """Server."""
+
+# Standard imports
 import argparse
-import cv2
-from datetime import datetime
-from keras.models import model_from_json
-import numpy as np
 import os
 import pickle
-# from scipy.misc import imresize
+from datetime import datetime
 import socket
 import struct
-import tensorflow as tf
 import threading
 import time
-import usb.core
-import usb.util
 import logging
 
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+# Local imports
+from keras.models import model_from_json
 
-parser = argparse.ArgumentParser(description='Autonomous Driving Server')
-parser.add_argument('--autonomous', type=bool, default=False,
+# Other Imports
+import cv2
+import numpy as np
+import tensorflow as tf
+import usb.core
+import usb.util
+
+logging.basicConfig(format='%(asctime)s %(message)s',
+                    datefmt='%m/%d/%Y %H:%M:%S',
+                    level=logging.INFO)
+
+PARSER = argparse.ArgumentParser(description='Autonomous Driving Server')
+PARSER.add_argument('--autonomous', type=bool, default=False,
                     help='Boolean. If True then will be using Autonomous car capabilities.')
 
-args = parser.parse_args()
+ARGS = PARSER.parse_args()
 
 
-class ExitTkinterWindow(object):
-    """Custom exit error."""
-
-    pass
-
-
-class server(object):
+class Server(object):
     """Network server."""
 
     def __init__(self):
@@ -39,8 +40,9 @@ class server(object):
         # Start a socket listening for connections on 0.0.0.0:8000 (0.0.0.0 means
         # all interfaces)
 
-        with open('calib.p', 'rb') as f:
-            self.calib_params = pickle.load(f)   # calibration parameters for undistortion
+        with open('calib.p', 'rb') as calib_file:
+            # calibration parameters for undistortion
+            self.calib_params = pickle.load(calib_file)
         logging.info('Calibration parameters loaded.')
 
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,18 +52,18 @@ class server(object):
 
         self.drivers = {}
 
-        threading.Thread(target=self.instructor_G27).start()
+        threading.Thread(target=self.instructor_g27).start()
         while True:
             # accept connections from outside
             logging.info('Waiting for new connection..')
             (clientsocket, address) = server_socket.accept()
             # now do something with the clientsocket
             # in this case, we'll pretend this is a threaded server
-            logging.info('Connection from {}'.format(address))
+            logging.info('Connection from %s', address)
             threading.Thread(target=self.read_images, args=(clientsocket, address)).start()
             time.sleep(2)
 
-    def instructor_G27(self):
+    def instructor_g27(self):
         """Driving instructor with Logitech G27.
 
         controls_0 :
@@ -103,11 +105,12 @@ class server(object):
                     if controls_0 == 1:
                         diff = start_time - clicked
                         if diff > 0.3:
-                            addresses = sorted(list(self.drivers.keys()))  # get all 1 level keys (addresses)
+                            # get all 1 level keys (addresses)
+                            addresses = sorted(list(self.drivers.keys()))
                             try:
                                 address = addresses[idx]
                                 constant_speed = 0  # to zero when selecting new driver
-                                logging.info('Selecting {} to drive'.format(address))
+                                logging.info('Selecting %s to drive', address)
 
                                 idx += 1
                             except IndexError:
@@ -123,7 +126,7 @@ class server(object):
                             else:
                                 logging.info('Saving files : Started')
                                 dir_name = datetime.now().strftime("%Y-%m-%d-%I:%M:%S")
-                                os.makedirs(working_dir + dir_name)
+                                os.makedirs(WORKING_DIR + dir_name)
                                 self.drivers[address]['save_dir'] = dir_name
                                 self.drivers[address]['save'] = True
                         clicked = time.time()
@@ -173,15 +176,17 @@ class server(object):
                             constant_speed = 0  # to reset constant_speed to 0
 
                         if constant_speed == 0:
-                            self.drivers[address]['commands'] = (False, position, 255 - throttle, 255 - brakes)
+                            cmd = (False, position, 255 - throttle, 255 - brakes)
+                            self.drivers[address]['commands'] = cmd
                         else:
-                            self.drivers[address]['commands'] = (True, position, constant_speed, 255 - brakes)
+                            cmd = (True, position, constant_speed, 255 - brakes)
+                            self.drivers[address]['commands'] = cmd
                     elif address == '':
                         mode = 'testing'
 
-                except usb.core.USBError as e:
+                except usb.core.USBError as err:
                     data = None
-                    if e.args == ('Operation timed out',):
+                    if err.args == ('Operation timed out',):
                         continue
 
     def read_images(self, clientsocket, address):
@@ -196,7 +201,7 @@ class server(object):
 
         counter = 0
         times = []  # to calculate FPS depending on history data
-        th = None
+        thrd = None
         logging.info('Entering global loop')
 
         while True:
@@ -208,21 +213,23 @@ class server(object):
 
                 # Read the length of the image as a 32-bit unsigned int.
                 image_len = struct.unpack('<L', connection.read(struct.calcsize('<L')))[0]
-                # Construct a stream to hold the image data and read the image data from the connection
+                # Construct a stream to hold the image data and read the image data
+                # from the connection
                 data = pickle.loads(connection.read(image_len))
 
                 network_latency = time.time() + data['client_time']
                 fps = round(len(times) / (time.time() - times[0]), 0)
 
-                if th is not None:
-                    th.join()  # Keras wont work with more than one thread
-                th = threading.Thread(target=self.process_data, args=[clientsocket, address, data,
-                                                                      network_latency, fps, counter])
-                th.start()
+                if thrd is not None:
+                    thrd.join()  # Keras wont work with more than one thread
+                thrd = threading.Thread(target=self.process_data,
+                                        args=[clientsocket, address, data,
+                                              network_latency, fps, counter])
+                thrd.start()
 
-            except Exception as e:
-                # logging.exception(e)
-                logging.info('Display window closed. Closing connection. {}'.format(address[0]))
+            except Exception:
+                # logging.exception("While loop exception")
+                logging.info('Display window closed. Closing connection. %s', address[0])
                 break
 
             counter += 1
@@ -230,7 +237,7 @@ class server(object):
         del self.drivers[address[0]]
         connection.close()
         clientsocket.close()
-        logging.info('connection closed {}'.format(address[0]))
+        logging.info('connection closed %s', address[0])
 
     def steering_angle(self, steering, max_steering, adjust_output=None):
         """Convert steering values to normalized steering angle."""
@@ -246,6 +253,8 @@ class server(object):
             return output * adjust_output
 
     def driving_cmd(self, address, min_speed, max_speed, max_steering):
+        """Normalize steering and speed values."""
+
         const_speed, steering, throttle, brakes = self.drivers[address[0]]['commands']
 
         if brakes == 0 and not const_speed:
@@ -266,10 +275,11 @@ class server(object):
 
         return throttle, steering
 
-    def check_safety(self, steering, throttle, uDistance):
+    def check_safety(self, steering, throttle, u_distance):
+        """Check Safety with ultrasonic sensor."""
 
-        # if uDistance < 40:
-        #     return 0, 1
+        if u_distance < 40:
+            return 0, 1
 
         return steering, throttle
 
@@ -284,36 +294,41 @@ class server(object):
 
         start_time = time.time()
         image = cv2.imdecode(np.fromstring(data['image'], np.uint8), 1)  # image to be saved
-        uDistance = data['uDistance']  # Ultrasonic sensor measurements in cm
+        u_distance = data['uDistance']  # Ultrasonic sensor measurements in cm
         sys_load = data['sys_load']  # Client CPU load
 
         image = cv2.undistort(image, self.calib_params['mtx'], self.calib_params['dist'],
                               None, self.calib_params['mtx'])
 
-        max_steering = 20  # max value passed to servo motor
-        max_speed = 30  # max value passed to servo motor
-        min_speed = 5  # min value passed to servo motor, this needs to be handled here because of pedal fluctuactions
+        max_steering = 1  # max steering normalized from input control value
+        # min steering normalized from input control value, this needs to be
+        # handled here because of pedal fluctuactions
+        min_speed = 5
+        max_speed = 30  # max speed normalized from input control value
 
         throttle, steering = self.driving_cmd(address, min_speed, max_speed, max_steering)
 
-        if self.drivers[address[0]]['mode'] == 'autonomous' and args.autonomous:
+        if self.drivers[address[0]]['mode'] == 'autonomous' and ARGS.autonomous:
             # cv2 load image as BGR, but model expects RGB and crop center image
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)[:, 40:240]
 
-            with graph.as_default():
-                steering = float(model.predict(image[None, :, :, :], batch_size=1)[0, 0] * max_steering)
+            with GRAPH.as_default():
+                pred = MODEL.predict(image[None, :, :, :], batch_size=1)[0, 0]
+                steering = float(pred * max_steering)
 
-        # steering, throttle = self.check_safety(steering, throttle, uDistance)  # Safety system. Avoid collisions etc.
+        # Safety system. Avoid collisions etc.
+        # steering, throttle = self.check_safety(steering, throttle, uDistance)
         clientsocket.sendall(pickle.dumps({'counter': counter, 'server_time': time.time(),
                                            'instruction': (steering, throttle)}))
 
         processing_time = time.time() - start_time
-        threading.Thread(target=self.display_image, args=(image, address[0], processing_time, network_latency,
-                                                          steering, throttle, fps, counter, uDistance,
-                                                          sys_load)).start()
+        threading.Thread(target=self.display_image,
+                         args=(image, address[0], processing_time, network_latency,
+                               steering, throttle, fps, counter, u_distance,
+                               sys_load)).start()
 
     def display_image(self, image, address, processing_time, network_latency,
-                      steering, throttle, fps, counter, uDistance, sys_load):
+                      steering, throttle, fps, counter, u_distance, sys_load):
         """"Display image alongside with necessary information with cv2."""
         imshape = image.shape
         text = ("FPS: {}\nNetwork: {}ms"
@@ -328,14 +343,17 @@ class server(object):
         im_resized = cv2.resize(image, (new_width, new_hight))
 
         font = cv2.FONT_HERSHEY_SIMPLEX
-        y0, dy = 15, 15
-        for i, t in enumerate(text.split('\n')):
-            y = y0 + i * dy
-            cv2.putText(im_resized, t, (10, y), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        y_0, d_y = 15, 15
+        for i, txt in enumerate(text.split('\n')):
+            y_coord = y_0 + i * d_y
+            cv2.putText(im_resized, txt, (10, y_coord), font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
-        cv2.putText(im_resized, 'angle: ' + str(steering), (10, 135), font, 0.7, (0, 0, 255), 1, cv2.LINE_AA)
-        cv2.putText(im_resized, 'speed: ' + str(throttle), (10, 165), font, 0.7, (0, 128, 255), 1, cv2.LINE_AA)
-        cv2.putText(im_resized, 'collision: ' + str(uDistance), (10, 195), font, 0.7, (255, 0, 0), 1, cv2.LINE_AA)
+        cv2.putText(im_resized, 'angle: ' + str(steering), (10, 135), font, 0.7,
+                    (0, 0, 255), 1, cv2.LINE_AA)
+        cv2.putText(im_resized, 'speed: ' + str(throttle), (10, 165), font, 0.7,
+                    (0, 128, 255), 1, cv2.LINE_AA)
+        cv2.putText(im_resized, 'collision: ' + str(u_distance), (10, 195), font, 0.7,
+                    (255, 0, 0), 1, cv2.LINE_AA)
 
         cv2.startWindowThread()
         cv2.namedWindow(address)
@@ -361,32 +379,35 @@ class server(object):
         # cv2.imwrite(working_dir + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
         #                                                            'C', instruction), image)
         # im_left
-        cv2.imwrite(working_dir + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
-                                                                   'L', instruction), image[:, 0:200])
+        cv2.imwrite(WORKING_DIR + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
+                                                                   'L', instruction),
+                    image[:, 0:200])
         # im_center
-        cv2.imwrite(working_dir + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
-                                                                   'C', instruction), image[:, 40:240])
+        cv2.imwrite(WORKING_DIR + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
+                                                                   'C', instruction),
+                    image[:, 40:240])
         # im_right
-        cv2.imwrite(working_dir + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
-                                                                   'R', instruction), image[:, 80:280])
+        cv2.imwrite(WORKING_DIR + to_dir + '/{}_{}_{}.jpeg'.format(add + str(counter),
+                                                                   'R', instruction),
+                    image[:, 80:280])
 
 
 if __name__ == "__main__":
-    working_dir = '/home/nauris/Downloads/images/'
-    model_path = 'keras_models/model.json'
+    WORKING_DIR = '/home/nauris/Downloads/images/'
+    MODEL_PATH = 'keras_models/model.json'
 
-    if args.autonomous:
-        with open(model_path, 'r') as jfile:
-            model = model_from_json(jfile.read())
+    if ARGS.autonomous:
+        with open(MODEL_PATH, 'r') as jfile:
+            MODEL = model_from_json(jfile.read())
             logging.info('Model loaded')
 
-        model.compile("adam", "mse")
-        graph = tf.get_default_graph()
+        MODEL.compile("adam", "mse")
+        GRAPH = tf.get_default_graph()
         logging.info('Model compiled')
-        weights_file = model_path.replace('json', 'h5')
-        model.load_weights(weights_file)
+        WEIGHTS_FILE = MODEL_PATH.replace('json', 'h5')
+        MODEL.load_weights(WEIGHTS_FILE)
         logging.info('Weights loaded')
     else:
         logging.info('No autonomous driving features.')
 
-    server()
+    Server()
