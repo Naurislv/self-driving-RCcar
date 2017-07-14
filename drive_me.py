@@ -6,6 +6,7 @@ sudo crontab -e
 @reboot bash /home/pi/self-driving-RCcar/launcher.sh >/home/pi/self-driving-RCcar/logs/cronlog 2>&1
 
 """
+import argparse
 import logging
 import io
 import os
@@ -17,13 +18,8 @@ import sys
 import threading
 import time
 import psutil
-import controller
 
 # from ultrasonic_sensor_HCSR04 import SonicSensor
-
-fps = sys.argv[1]
-width = sys.argv[2]
-height = sys.argv[3]
 
 
 def uDistance():
@@ -39,8 +35,8 @@ class drive_me(object):
         """Inicilize class variables."""
         # Connect a client socket to my_server:8000
         self.my_servers = ['192.168.1.180']  # '192.168.1.230'
-        self.resolution = (int(width), int(height))  # 640,480 ; 320,200 ; 200, 66
-        self.framerate = int(fps)
+        self.resolution = (ARGS.width, ARGS.height  # 640,480 ; 320,200 ; 200, 66
+        self.framerate = ARGS.fps
         self.rotation = 0
 
     def server_address(self):
@@ -135,8 +131,8 @@ class drive_me(object):
             data = pickle.loads(client_socket.recv(1024))  # receive instructions from server
 
             steering, throttle = data['instruction']
-            # controller.steer_goal_set(steering)
-            # controller.speed_goal_set(throttle)
+            controller.steer_goal_set(steering)
+            controller.speed_goal_set(throttle)
 
             self.server_time[counter + 1] = {}  # starts from 1
             self.server_time[counter + 1]['client_process'] = time.time()
@@ -147,7 +143,36 @@ class drive_me(object):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+    PARSER = argparse.ArgumentParser(description='Actual autonomous driver placed on car itself.')
+    PARSER.add_argument('--fps', type=int, default=7,
+                        help='Frames per second for RasPI camera.')
+    PARSER.add_argument('--width', type=int, default=280,
+                        help='Width of RasPI camera video image.')
+    PARSER.add_argument('--height', type=int, default=110,
+                        help='Height of RasPI camera video image.')
+    PARSER.add_argument('--controller', type=str, default='roomba',
+                        help="Choose which controller you want to use. There are different"
+                             "controllers for differnt hardware platforms.\n"
+                             "Currently available : roomba or wltoys_a969")
+
+    ARGS = PARSER.parse_args()
+
+    # There may be different controllers for different robots, but for all of them,
+    # they must support 4 commands:
+    # controller.start()  # initialize system
+    # controller.halt()  # safetly shutdown system
+    # controller.steer_goal_set()  # set steering goal normalized 0..1
+    #                                (should be radius in future)
+    # controller.speed_goal_set()  # set speed goal cm/s
+
+    if ARGS.controller == 'wltoys_a969':
+        import wltoys_a969.controller
+    elif ARGS.controller == 'roomba':
+        import roomba.controller
+    
+    logging.basicConfig(format='%(asctime)s %(message)s',
+                        datefmt='%m/%d/%Y %H:%M:%S',
+                        level=logging.INFO)
 
     brain = drive_me()
     brain.drive()
