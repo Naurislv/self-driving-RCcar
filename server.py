@@ -13,6 +13,7 @@ import logging
 
 # Local imports
 from keras.models import model_from_json
+from keystroke import wait_key, STROKES
 
 # Other Imports
 import cv2
@@ -29,6 +30,10 @@ PARSER = argparse.ArgumentParser(description='Autonomous Driving Server')
 PARSER.add_argument('--autonomous', type=bool, default=False,
                     help='Boolean. If True then will be using Autonomous car capabilities.')
 
+PARSER.add_argument('--undistort', type=bool, default=False,
+                    help="Boolean. If True then will undistort raspberry image sent from "
+                         "Fisheye lense.")
+
 ARGS = PARSER.parse_args()
 
 
@@ -40,10 +45,11 @@ class Server(object):
         # Start a socket listening for connections on 0.0.0.0:8000 (0.0.0.0 means
         # all interfaces)
 
-        with open('calib.p', 'rb') as calib_file:
-            # calibration parameters for undistortion
-            self.calib_params = pickle.load(calib_file)
-        logging.info('Calibration parameters loaded.')
+        if ARGS.undistort:
+            with open('calib.p', 'rb') as calib_file:
+                # calibration parameters for undistortion
+                self.calib_params = pickle.load(calib_file)
+            logging.info('Calibration parameters loaded.')
 
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -63,6 +69,84 @@ class Server(object):
             threading.Thread(target=self.read_images, args=(clientsocket, address)).start()
             time.sleep(2)
 
+    def instructor_keyboard(self):
+        """Give commands to driver from keyboard."""
+
+        recv = True
+        address = ''
+        idx = 0
+
+        while recv is not False:
+            recv = wait_key()
+
+            address_list = sorted(list(self.drivers.keys()))
+
+            if address_list and recv is not None: # if address is not empty list
+
+                if recv == 'next':
+                    address = address_list[idx]
+                    logging.info('Connected to %s driver', address)
+                    idx += 1
+                    if idx == len(address_list):
+                        idx = 0
+                elif recv == 'mode':
+                    if self.drivers[address]['mode'] != 'train':
+                        logging.info('Entering Train mode')
+                        self.drivers[address]['mode'] = 'train'
+                        self.drivers[address]['speed'] = 0
+                    elif self.drivers[address]['mode'] == 'train':
+                        logging.info('Entering Autonomous mode')
+                        self.drivers[address]['mode'] = 'autonomous'
+                        self.drivers[address]['speed'] = 0
+                elif recv == 'left':
+                    # Inverse steering radius (isr) 1/r used to make steering independet
+                    # of car geometry. When raidus goes towards infinity (straigth)
+                    # line then isr goes towards 0. Radius is measured in meters.
+                    current_isr = self.drivers[address]['commands'][0]
+
+                    # convert to radius change value in meters for convenience
+                    # current_radius = 1 / current_isr
+                    # set_radius = current_radius + 0.1
+
+                    current_isr -= 0.1
+                    self.drivers[address]['commands'][0] = current_isr
+
+                    logging.debug('Radius in meters set to %s', current_isr)
+                elif recv == 'right':
+                    # Inverse steering radius (isr) 1/r used to make steering independet
+                    # of car geometry. When raidus goes towards infinity (straigth)
+                    # line then isr goes towards 0. Radius is measured in meters.
+                    current_isr = self.drivers[address]['commands'][0]
+
+                    # convert to radius change value in meters for convenience
+                    # current_radius = 1 / current_isr
+                    # set_radius = current_radius + 0.1
+
+                    current_isr += 0.1
+                    self.drivers[address]['commands'][0] = current_isr
+
+                    logging.debug('Radius in meters set to %s', current_isr)
+                elif recv == 'forward':
+                    # Speed is measured in km/h
+                    self.drivers[address]['commands'][1] += 0.2
+                elif recv == 'backward':
+                    # Speed is measured in km/h
+                    self.drivers[address]['commands'][1] -= 0.2
+                elif recv == 'stop':
+                    # Speed is measured in km/h
+                    self.drivers[address]['commands'][1] = 0
+
+            elif recv is not None:
+                logging.info("There is no driver connected right now.")
+            else:
+                logging.info(address)
+                logging.info(self.drivers)
+                logging.info("Command button does not exist see full list"
+                             "of commands available")
+
+                for key, val in STROKES.items():
+                    logging.info("   %s: %s", repr(key), val)
+
     def instructor_g27(self):
         """Driving instructor with Logitech G27.
 
@@ -77,7 +161,8 @@ class Server(object):
         dev = usb.core.find(idVendor=0x046d, idProduct=0xc29b)
 
         if dev is None:
-            logging.info('Steering wheel not found!')
+            logging.info('Steering wheel not found, fallback to keyboard.')
+            self.instructor_keyboard()
         else:
             logging.info('Logitech G27 Racing Wheel found!')
 
@@ -192,7 +277,7 @@ class Server(object):
     def read_images(self, clientsocket, address):
         """Read images in loop directly from connection."""
         self.drivers[address[0]] = {}
-        self.drivers[address[0]]['commands'] = (False, 0, 0, 0)
+        self.drivers[address[0]]['commands'] = [0, 0]
         self.drivers[address[0]]['save'] = False
         self.drivers[address[0]]['mode'] = 'testing'
 
@@ -239,42 +324,6 @@ class Server(object):
         clientsocket.close()
         logging.info('connection closed %s', address[0])
 
-    def steering_angle(self, steering, max_steering, adjust_output=None):
-        """Convert steering values to normalized steering angle."""
-        if steering < -max_steering:
-            steering = -max_steering
-        elif steering > max_steering:
-            steering = max_steering
-
-        output = steering / (max_steering + 1)
-        if adjust_output is None:
-            return output
-        else:
-            return output * adjust_output
-
-    def driving_cmd(self, address, min_speed, max_speed, max_steering):
-        """Normalize steering and speed values."""
-
-        const_speed, steering, throttle, brakes = self.drivers[address[0]]['commands']
-
-        if brakes == 0 and not const_speed:
-            throttle_noise = 52  # expect throttle to be from 0 .. 255
-            if throttle <= 52:
-                # to remove fluctuactions when clutch is not completely relaxed
-                throttle = 0
-            else:
-                # now throttle will be from min_speed ... max_speed
-                throttle = (throttle - throttle_noise) / (255 - throttle_noise)
-                throttle = throttle * (max_speed - min_speed) + min_speed
-        elif brakes == 0 and const_speed:
-            pass  # use constant speed as is
-        else:
-            throttle = -brakes / 255 * max_speed
-
-        steering = self.steering_angle(steering, 10000, max_steering)
-
-        return throttle, steering
-
     def check_safety(self, steering, throttle, u_distance):
         """Check Safety with ultrasonic sensor."""
 
@@ -297,16 +346,12 @@ class Server(object):
         u_distance = data['uDistance']  # Ultrasonic sensor measurements in cm
         sys_load = data['sys_load']  # Client CPU load
 
-        image = cv2.undistort(image, self.calib_params['mtx'], self.calib_params['dist'],
-                              None, self.calib_params['mtx'])
+        if ARGS.undistort:
+            image = cv2.undistort(image, self.calib_params['mtx'],
+                                  self.calib_params['dist'],
+                                  None, self.calib_params['mtx'])
 
-        max_steering = 1  # max steering normalized from input control value
-        # min steering normalized from input control value, this needs to be
-        # handled here because of pedal fluctuactions
-        min_speed = 5
-        max_speed = 30  # max speed normalized from input control value
-
-        throttle, steering = self.driving_cmd(address, min_speed, max_speed, max_steering)
+        steering, throttle = self.drivers[address[0]]['commands']
 
         if self.drivers[address[0]]['mode'] == 'autonomous' and ARGS.autonomous:
             # cv2 load image as BGR, but model expects RGB and crop center image
@@ -314,8 +359,18 @@ class Server(object):
 
             with GRAPH.as_default():
                 pred = MODEL.predict(image[None, :, :, :], batch_size=1)[0, 0]
-                steering = float(pred * max_steering)
+                # current trained model predicts number in interval 0 .. 1 which
+                # is steering angle. We need to convert it to inverse radius. Which
+                # of-course if rough estimation.
 
+                # s = 0.01  # wheel base
+                # a = pred * 18  # steering wheel angle
+                # n = 1  # steering ratio (e.g. for 16:1, n = 16)
+
+                # radius = s / (sqrt(2 - 2 * cos(2*a/n)))
+                steering = float(pred)
+
+        # logging.info("%s %s", steering, throttle)
         # Safety system. Avoid collisions etc.
         # steering, throttle = self.check_safety(steering, throttle, uDistance)
         clientsocket.sendall(pickle.dumps({'counter': counter, 'server_time': time.time(),
