@@ -4,7 +4,7 @@
 import logging
 
 # Local imports
-import create
+from roomba import create
 
 ROOMBA_PORT = '/dev/serial0'
 
@@ -15,8 +15,8 @@ class DriverController(object):
     def __init__(self):
         self.robot = None
 
-        self.current_steer = 0
-        self.current_speed = 0
+        self.current_tcr = 0
+        self.current_cmps = 0
 
     def start(self):
         """Create roomba object with specified arguments."""
@@ -28,23 +28,38 @@ class DriverController(object):
 
     def halt(self):
         """Shuw down roomba controller."""
-        self.robot.close()
+        logging.info("Closing robot")
+        self.robot.stop()
+        # self.robot.close()
 
-    def steer_goal_set(self, steer):
-        """Set roomba current steering angle."""
-        self.current_steer = steer * 18
-        self.robot.go(self.current_speed, self.current_steer)
+    def steer_goal_set(self, tcr):
+        """Set roomba current Degree Per Second.
+
+        Inputs:
+            tcr: Turning Circle Radius im mm
+        """
+
+        # "-" because clockwise
+        # Formula extracrected from robot.go code (Go To Definition to check more)
+        # self.current_dps = - math.degrees(10.0 * self.current_cmps / tcr)
+
+        # logging.info("Controls %s %s", self.current_dps, self.current_cmps)
+        # self.robot.go(self.current_cmps, self.current_dps)
+
+        self.current_tcr = tcr
+        self.robot._drive(10.0 * self.current_cmps, self.current_tcr)  # pylint: disable=W0212
 
     def speed_goal_set(self, speed):
-        """Set roomba current speed."""
+        """Set roomba current speed - cm per second"""
+        self.current_cmps = speed
 
-        self.current_speed = speed
-        self.robot.go(self.current_speed, self.current_steer)
+        # logging.info("Controls %s %s", self.current_dps, self.current_cmps)
+        self.robot.go(self.current_cmps, self.current_tcr)
 
 
 # Initialize DriverController class
-Driver = DriverController()
-speed_goal_set = Driver.speed_goal_set
-steer_goal_set = Driver.steer_goal_set
-halt = Driver.halt
-start = Driver.start
+DRIVER = DriverController()
+SPEED_GOAL_SET = DRIVER.speed_goal_set
+STEER_GOAL_SET = DRIVER.steer_goal_set
+HALT = DRIVER.halt
+START = DRIVER.start

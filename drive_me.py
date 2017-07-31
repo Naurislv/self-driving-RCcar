@@ -34,10 +34,10 @@ class drive_me(object):
     def __init__(self):
         """Inicilize class variables."""
         # Connect a client socket to my_server:8000
-        self.my_servers = ['192.168.1.180']  # '192.168.1.230'
-        self.resolution = (ARGS.width, ARGS.height  # 640,480 ; 320,200 ; 200, 66
+        self.my_servers = ['192.168.65.251']  # '192.168.1.230'
+        self.resolution = (ARGS.width, ARGS.height)  # 640,480 ; 320,200 ; 200, 66
         self.framerate = ARGS.fps
-        self.rotation = 0
+        self.rotation = 180
 
     def server_address(self):
         """Ping addresses, if reachable then return it."""
@@ -66,7 +66,7 @@ class drive_me(object):
                     connection = client_socket.makefile('wb')
 
                     logging.info('Sending image stream to server and starting motor driver..')
-                    controller.start()
+                    controller.START()
                     with PiCamera() as camera:
                         # resize image to closest resolution and then to get this resolution
                         camera.resolution = self.resolution
@@ -117,11 +117,11 @@ class drive_me(object):
                 logging.exception(e)
                 # After crash always se steer and speed to 0 so no phycal crash could occur
                 logging.info('Halt!, Setting steer and speed to 0.')
-                controller.halt()
+                controller.HALT()
                 time.sleep(10)
             except KeyboardInterrupt:
                 logging.info('Setting steer and speed to 0.')
-                controller.halt()
+                controller.HALT()
                 break
 
     def recevei_thread(self, client_socket, counter):
@@ -131,8 +131,8 @@ class drive_me(object):
             data = pickle.loads(client_socket.recv(1024))  # receive instructions from server
 
             steering, throttle = data['instruction']
-            controller.steer_goal_set(steering)
-            controller.speed_goal_set(throttle)
+            controller.STEER_GOAL_SET(steering)
+            controller.SPEED_GOAL_SET(throttle)
 
             self.server_time[counter + 1] = {}  # starts from 1
             self.server_time[counter + 1]['client_process'] = time.time()
@@ -159,17 +159,16 @@ if __name__ == "__main__":
 
     # There may be different controllers for different robots, but for all of them,
     # they must support 4 commands:
-    # controller.start()  # initialize system
-    # controller.halt()  # safetly shutdown system
-    # controller.steer_goal_set()  # set steering goal normalized 0..1
-    #                                (should be radius in future)
-    # controller.speed_goal_set()  # set speed goal cm/s
+    # controller.START()  # initialize system
+    # controller.HALT()  # safetly shutdown system
+    # controller.STEER_GOAL_SET()  # set steering goal as radius in mm
+    # controller.SPEED_GOAL_SET()  # set speed goal cm/s
 
     if ARGS.controller == 'wltoys_a969':
-        import wltoys_a969.controller
+        from wltoys_a969 import controller
     elif ARGS.controller == 'roomba':
-        import roomba.controller
-    
+        from roomba import controller
+
     logging.basicConfig(format='%(asctime)s %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO)
