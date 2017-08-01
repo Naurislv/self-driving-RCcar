@@ -13,7 +13,7 @@ import logging
 
 # Local imports
 from keras.models import model_from_json
-from keystroke import wait_key, STROKES
+from Keystroke import wait_key, STROKES
 
 # Other Imports
 import cv2
@@ -449,7 +449,7 @@ class Server(object):
 
 if __name__ == "__main__":
     WORKING_DIR = '/home/nauris/Downloads/images/'
-    MODEL_PATH = 'keras_models/model.json'
+    MODEL_PATH = 'models/model.json'
 
     if ARGS.autonomous:
         with open(MODEL_PATH, 'r') as jfile:
