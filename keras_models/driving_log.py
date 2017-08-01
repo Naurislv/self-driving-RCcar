@@ -29,7 +29,9 @@ def angle2tcr(angle, wheelbase):
         only-the-steering-ratio-and-vehicles-basic-dimensions-are-known
     """
 
-    return wheelbase / math.sin(math.radians(angle))
+    tcr = math.sin(math.radians(angle)) / wheelbase  # I 1 / Radius
+
+    return tcr
 
 def read(path, wheelbase):
     """Read driving_log from image names"""
@@ -49,7 +51,7 @@ def read(path, wheelbase):
             if id_nr not in ret_dict:
                 ret_dict[id_nr] = {}
 
-            tcr = angle2tcr(steer, wheelbase)
+            tcr = angle2tcr(float(steer), wheelbase)
 
             ret_dict[id_nr][pos] = (im_p, tcr, thorttle)
 

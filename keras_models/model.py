@@ -5,7 +5,6 @@ More info in README.md
 """
 # Standard imports
 import logging
-import math
 
 # Local imports
 import driving_log
@@ -21,6 +20,7 @@ import tensorflow as tf
 import cv2
 import numpy as np
 from scipy.misc import imresize
+from sklearn.utils import shuffle
 
 logging.basicConfig(format='%(asctime)s %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
@@ -217,6 +217,33 @@ def train_generator(dataset, labels, batch_size):
         yield _dataset, _labels
 
 
+def train_generator_v2(dataset, labels, batch_size):
+    """Training generator."""
+    dataset_size = labels.shape[0]
+
+    start = 0
+    while True:
+        end = start + batch_size
+
+        if end <= dataset_size:
+            _dataset, _labels = np.copy(dataset[start:end]), np.copy(labels[start:end])
+        else:
+            diff = end - dataset_size
+            _dataset = np.concatenate((np.copy(dataset[start:]), np.copy(dataset[0:diff])), axis=0)
+            _labels = np.concatenate((np.copy(labels[start:]), np.copy(labels[0:diff])), axis=0)
+            start = 0
+
+            dataset, labels = shuffle(dataset, labels)
+
+        _dataset, _labels = UTILS.random_shifts(_dataset, _labels, 22, 16)
+        _dataset = UTILS.random_brightness(_dataset)
+        _dataset = UTILS.random_shadows(_dataset)
+
+        start += batch_size
+
+        yield _dataset, _labels
+
+
 def model(data):
     """Create keras model.
 
@@ -254,7 +281,7 @@ logging.info('Preparing dataset/-s, may take awhile')
 # https://www.banggood.com/Wltoys-A969-Rc-Car-118-2_4Gh-4WD-Short-Course-Truck-p-916962.html
 DRIVE_INFO = driving_log.read(FLAGS.train_path, 165)
 DATASET, LABELS, _ = prep_trainingset(DRIVE_INFO)
-TRAING_GEN = train_generator(DATASET, LABELS, FLAGS.batch_size)
+TRAING_GEN = train_generator_v2(DATASET, LABELS, FLAGS.batch_size)
 
 # Valid dataset and generator if val_path (validation driving log path) is provided
 if FLAGS.val_path != '':
@@ -272,13 +299,24 @@ if FLAGS.keras_weights != '':
 
 try:
     if FLAGS.val_path != '':
-        KERAS_MODEL.fit_generator(generator=TRAING_GEN, steps_per_epoch=FLAGS.batch_size,
-                                  epochs=FLAGS.epochs, verbose=1,
-                                  validation_data=(VALID_DATA, VALID_LABELS),
-                                  pickle_safe=True, workers=12)
+        KERAS_MODEL.fit_generator(
+            generator=TRAING_GEN,
+            steps_per_epoch=FLAGS.batch_size,
+            epochs=FLAGS.epochs,
+            verbose=1,
+            validation_data=(VALID_DATA, VALID_LABELS),
+            use_multiprocessing=True,
+            workers=12
+        )
     else:
-        KERAS_MODEL.fit_generator(generator=TRAING_GEN, steps_per_epoch=FLAGS.batch_size,
-                                  epochs=FLAGS.epochs, verbose=1, pickle_safe=True, workers=12)
+        KERAS_MODEL.fit_generator(
+            generator=TRAING_GEN,
+            steps_per_epoch=FLAGS.batch_size,
+            epochs=FLAGS.epochs,
+            verbose=1,
+            use_multiprocessing=True,
+            workers=12
+        )
 
     # If output_model dir path provided save model. #
     if FLAGS.output_model != '':
