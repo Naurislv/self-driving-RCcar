@@ -17,21 +17,33 @@ def _re(path):
 
     return re.findall(r"^([0-9]{6})_([CLR])_\(([-.0-9]+), ([-.0-9]+)", path)[0]
 
-def angle2tcr(angle, wheelbase):
-    """Convert cars steering angle to Turning Circle Radius.
+def angle2tcr(angle, wheelbase, center_of_mass=0):
+    """Convert cars steering angle to curvatrue which is  1 / Turning Circle Radius.
 
     Inputs:
-        wheelbase: distance between wheels centers in mm
         angle: steering angle in degrees
+        wheelbase: distance between wheels contact points in mm
+        center_of_mass: distance between the back wheel contact point and centor of mass in mm
+
+    Output:
+        curvature: Inverse Turning Circle radius or curvature
 
     Resources:
-        https://www.quora.com/What-is-the-method-to-calculate-turning-radius-if-
-        only-the-steering-ratio-and-vehicles-basic-dimensions-are-known
+        https://goo.gl/FNf8CZ
     """
 
-    tcr = math.sin(math.radians(angle)) / wheelbase  # I 1 / Radius
+    # Find TCR using Bycicle Model
+    # https://sites.google.com/site/bikephysics/english-version/2-geometry-and-kinematics
 
-    return tcr
+    # If we don't know center_of mass then we assue it is 0
+    if center_of_mass == 0:
+        curvature = math.tan(math.radians(angle)) / wheelbase
+    else:
+        angle += 1e-12  # avoid dealing with 0
+        curvature = 1 / math.sqrt(center_of_mass**2 +
+                                  (wheelbase / math.tan(math.radians(angle)))**2)
+
+    return curvature
 
 def read(path, wheelbase):
     """Read driving_log from image names"""

@@ -3,4 +3,4 @@ __pycache__/
 .ipynb_checkpoints/
 .directory
 train_dataset/
-keras_models/model_archive/
+models/model_archive/

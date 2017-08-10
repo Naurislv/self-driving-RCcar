@@ -43,7 +43,7 @@ if FLAGS.train_path == '':
 
 def prep_dataset(drive_info, use_left_right=True):
     """Prepare dataset for keras model."""
-    dataset, labels = UTILS.load_data(drive_info, use_left_right)
+    dataset, labels = Utils.load_data(drive_info, use_left_right)
 
     return dataset, labels
 
@@ -60,33 +60,6 @@ def prep_trainingset(drive_info):
 
 
 def train_generator(dataset, labels, batch_size):
-    """Training generator."""
-    dataset_size = labels.shape[0]
-
-    start = 0
-    while True:
-        end = start + batch_size
-
-        _dataset = np.copy(dataset)
-        _labels = np.copy(labels)
-
-        if end <= dataset_size:
-            _dataset, _labels = _dataset[start:end], _labels[start:end]
-        else:
-            diff = end - dataset_size
-            _dataset = np.concatenate((_dataset[start:], _dataset[0:diff]), axis=0)
-            _labels = np.concatenate((_labels[start:], _labels[0:diff]), axis=0)
-            start = 0
-
-        _dataset, _labels = Utils.random_shifts(_dataset, _labels, 22, 16)
-        _dataset = Utils.random_brightness(_dataset)
-        _dataset = Utils.random_shadows(_dataset)
-
-        start += batch_size
-        yield _dataset, _labels
-
-
-def train_generator_v2(dataset, labels, batch_size):
     """Training generator."""
     dataset_size = labels.shape[0]
 
@@ -122,23 +95,25 @@ def model(data):
     dshape = data.shape
 
     seq_model = Sequential()
-    seq_model.add(BatchNormalization(input_shape=(dshape[1], dshape[2], dshape[3])))
-    seq_model.add(Conv2D(24, (5, 5), padding='valid', activation='relu', strides=(2, 2)))
-    seq_model.add(Conv2D(36, (5, 5), padding='valid', activation='relu', strides=(2, 2)))
-    seq_model.add(Conv2D(48, (5, 5), padding='valid', activation='relu', strides=(2, 2)))
-    seq_model.add(Conv2D(64, (3, 3), padding='valid', activation='relu'))
-    seq_model.add(Conv2D(64, (3, 3), padding='valid', activation='relu'))
+    # seq_model.add(BatchNormalization(input_shape=(dshape[1], dshape[2], dshape[3])))
+    # seq_model.add(Conv2D(24, (5, 5), padding='valid', activation='relu', strides=(2, 2)))
+    seq_model.add(Conv2D(24, (5, 5), padding='valid', activation='selu', strides=(2, 2),
+                         input_shape=(dshape[1], dshape[2], dshape[3])))
+    seq_model.add(Conv2D(36, (5, 5), padding='valid', activation='selu', strides=(2, 2)))
+    seq_model.add(Conv2D(48, (5, 5), padding='valid', activation='selu', strides=(2, 2)))
+    seq_model.add(Conv2D(64, (3, 3), padding='valid', activation='selu'))
+    seq_model.add(Conv2D(64, (3, 3), padding='valid', activation='selu'))
     seq_model.add(Flatten())
-    seq_model.add(Dense(100, activation='relu'))
+    seq_model.add(Dense(100, activation='selu'))
     if FLAGS.dropout == 1:
         seq_model.add(Dropout(0.4))
-    seq_model.add(Dense(50, activation='relu'))
-    seq_model.add(Dense(10, activation='relu'))
+    seq_model.add(Dense(50, activation='selu'))
+    seq_model.add(Dense(10, activation='selu'))
     if FLAGS.dropout == 1:
         seq_model.add(Dropout(0.4))
     seq_model.add(Dense(1))
 
-    seq_model.compile(loss='mse', optimizer=adam(lr=0.0001))
+    seq_model.compile(loss='mse', optimizer=adam(lr=0.0001), metrics=['mse'])
 
     return seq_model
 
@@ -150,7 +125,7 @@ logging.info('Preparing dataset/-s, may take awhile')
 # https://www.banggood.com/Wltoys-A969-Rc-Car-118-2_4Gh-4WD-Short-Course-Truck-p-916962.html
 DRIVE_INFO = DrivingLog.read(FLAGS.train_path, 165)
 DATASET, LABELS, _ = prep_trainingset(DRIVE_INFO)
-TRAING_GEN = train_generator_v2(DATASET, LABELS, FLAGS.batch_size)
+TRAING_GEN = train_generator(DATASET, LABELS, FLAGS.batch_size)
 
 # Valid dataset and generator if val_path (validation driving log path) is provided
 if FLAGS.val_path != '':
@@ -168,9 +143,9 @@ if FLAGS.keras_weights != '':
 
 try:
     if FLAGS.val_path != '':
-        KERAS_MODEL.fit_generator(
+        HISTORY = KERAS_MODEL.fit_generator(
             generator=TRAING_GEN,
-            steps_per_epoch=FLAGS.batch_size,
+            steps_per_epoch=len(DATASET) / FLAGS.batch_size,
             epochs=FLAGS.epochs,
             verbose=1,
             validation_data=(VALID_DATA, VALID_LABELS),
@@ -178,9 +153,9 @@ try:
             workers=12
         )
     else:
-        KERAS_MODEL.fit_generator(
+        HISTORY = KERAS_MODEL.fit_generator(
             generator=TRAING_GEN,
-            steps_per_epoch=FLAGS.batch_size,
+            steps_per_epoch=len(DATASET) / FLAGS.batch_size,
             epochs=FLAGS.epochs,
             verbose=1,
             use_multiprocessing=True,
@@ -189,7 +164,14 @@ try:
 
     # If output_model dir path provided save model. #
     if FLAGS.output_model != '':
-        Utils.save_keras_model(KERAS_MODEL, FLAGS.output_model)
+        SAVE_PATH = "{}_epoch[{}]_bs[{}]_loss[{}]_".format(
+            FLAGS.output_model,
+            FLAGS.epochs,
+            FLAGS.batch_size,
+            HISTORY.history['loss'][-1]  # Get last loss entry
+        )
+
+        Utils.save_keras_model(KERAS_MODEL, SAVE_PATH)
 except KeyboardInterrupt:
     # Early stopping possible by interruping script. If output_model dir path provided save model. #
     if FLAGS.output_model != '':
