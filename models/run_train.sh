@@ -1,11 +1,25 @@
 #!/bin/bash
 
-python Train.py --train_path /home/nauris/Dropbox/coding/self-driving-RCcar/train_dataset/ --output_model model_archive/nobatch_norm_RELU --epochs 5
-python Train.py --train_path /home/nauris/Dropbox/coding/self-driving-RCcar/train_dataset/ --output_model model_archive/nobatch_norm_RELU --epochs 10
-python Train.py --train_path /home/nauris/Dropbox/coding/self-driving-RCcar/train_dataset/ --output_model model_archive/nobatch_norm_RELU --epochs 15
-python Train.py --train_path /home/nauris/Dropbox/coding/self-driving-RCcar/train_dataset/ --output_model model_archive/nobatch_norm_RELU --epochs 20
-python Train.py --train_path /home/nauris/Dropbox/coding/self-driving-RCcar/train_dataset/ --output_model model_archive/nobatch_norm_RELU --epochs 25
-python Train.py --train_path /home/nauris/Dropbox/coding/self-driving-RCcar/train_dataset/ --output_model model_archive/nobatch_norm_RELU --epochs 35
-python Train.py --train_path /home/nauris/Dropbox/coding/self-driving-RCcar/train_dataset/ --output_model model_archive/nobatch_norm_RELU --epochs 50
-python Train.py --train_path /home/nauris/Dropbox/coding/self-driving-RCcar/train_dataset/ --output_model model_archive/nobatch_norm_RELU --epochs 70
-python Train.py --train_path /home/nauris/Dropbox/coding/self-driving-RCcar/train_dataset/ --output_model model_archive/nobatch_norm_RELU --epochs 100
+train_path="/home/nauris/Dropbox/coding/self-driving-RCcar/train_dataset/"
+
+for i in 10 20 30 40 70 100 # Epochs
+do
+    save_prefix="TEST"
+    
+    echo "Eoch count: $i"
+    for d in 0 1 # Dropout
+    do
+        echo "Dropout: $d"
+        for a in "selu" "relu" # Activation
+        do
+            echo "Activation: $a"
+            for n in 0 1 # Batch normalization
+            do
+                echo "Batch Normalization: $n"
+                python Train.py --train_path ${train_path} --output_model model_archive/Test --epochs ${i} --dropout ${d} --activation ${a} --batch_norm ${n}
+            done
+        done
+    done
+done
+
+# python Train.py --train_path ${train_path} --output_model model_archive/Test --epochs 10 --dropout 0 --activation selu --batch_norm 0

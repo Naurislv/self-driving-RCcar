@@ -2,6 +2,7 @@
 
 # Standard imports
 import logging
+import math
 
 # Dependecy imports
 import cv2
@@ -9,7 +10,7 @@ import numpy as np
 from scipy.misc import imresize
 
 
-def load_data(drive_info, use_left_right=True):
+def load_data(drive_info, wheelbase=20, use_left_right=True):
     """Load images from files.
 
     Randomly will load one of three possible images for each path - left, center or right.
@@ -22,30 +23,62 @@ def load_data(drive_info, use_left_right=True):
     dataset = []
     labels = []
 
-    for key in drive_info:
+    for entry in drive_info:
 
         if use_left_right:
             i_lrc = np.random.randint(3)
             if i_lrc == 0:
-                im_path, steer, thorttle = drive_info[key]['L']
-                shift_ang = .18
+                im_path, steer, thorttle = entry['L']
+                shift_ang = 3.6 # Shift by degrees
             if i_lrc == 1:
-                im_path, steer, thorttle = drive_info[key]['C']
+                im_path, steer, thorttle = entry['C']
                 shift_ang = 0.
             if i_lrc == 2:
-                im_path, steer, thorttle = drive_info[key]['R']
-                shift_ang = -.18
+                im_path, steer, thorttle = entry['R']
+                shift_ang = -3.6 # Shift by degrees
         else:
-            im_path, steer, thorttle = drive_info[key]['C']
+            im_path, steer, thorttle = entry['C']
             shift_ang = 0.
 
         im_side = cv2.imread(im_path)
         im_side = cv2.cvtColor(im_side, cv2.COLOR_BGR2RGB)
 
         dataset.append(im_side)
-        labels.append(steer + shift_ang)
+
+        steer += shift_ang # add shift angle
+
+        tcr = angle2tcr(float(steer), wheelbase)
+        labels.append(tcr)
 
     return np.array(dataset), np.array(labels)
+
+def angle2tcr(angle, wheelbase, center_of_mass=0):
+    """Convert cars steering angle to curvatrue which is  1 / Turning Circle Radius.
+
+    Inputs:
+        angle: steering angle in degrees
+        wheelbase: distance between wheels contact points in mm
+        center_of_mass: distance between the back wheel contact point and centor of mass in mm
+
+    Output:
+        curvature: Inverse Turning Circle radius or curvature
+
+    Resources:
+        https://goo.gl/FNf8CZ
+    """
+
+    # Find TCR using Bycicle Model
+    # https://sites.google.com/site/bikephysics/english-version/2-geometry-and-kinematics
+
+    # If we don't know center_of mass then we assue it is 0
+    if center_of_mass == 0:
+        curvature = math.tan(math.radians(angle)) / wheelbase
+    else:
+        angle += 1e-12  # avoid dealing with 0
+        curvature = 1 / math.sqrt(center_of_mass**2 +
+                                  (wheelbase / math.tan(math.radians(angle)))**2)
+
+    return curvature
 
 def resize_im(images):
     """Resize give image dataset."""
@@ -65,7 +98,8 @@ def save_keras_model(save_model, path):
     with open(path + 'model.json', "w") as text_file:
         text_file.write(save_model.to_json())
 
-    logging.info('\n\nKeras model saved.')
+    logging.info('Keras json model saved. %s', path + 'model.json')
+    logging.info('Keras h5 model saved. %s', path + 'model.h5')
 
 def random_brightness(images):
     """Add random brightness to give image dataset to imitate day/night."""
