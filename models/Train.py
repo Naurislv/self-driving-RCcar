@@ -53,6 +53,16 @@ _FLAGS.DEFINE_string('activation', 'selu', "SELU - Set all activation functions 
 if FLAGS.train_path == '':
     raise OSError('Please provide argument : --train_path path_to_training_images')
 
+def rand_batch_idx(dataset_size, batch_size, idx):
+    rand_idx = random.sample(range(dataset_size), dataset_size)
+
+    idx = 0
+    while True:
+        if idx == 0:
+            rand_idx = random.sample(range(dataset_size), dataset_size)
+
+        yield rand_idx[idx * batch_size:(idx + 1) * batch_size]
+
 class DatasetSequence(Sequence):
     """Keras utils Sequence implementation for fit_generator
 
@@ -112,9 +122,11 @@ def model(dshape):
     if FLAGS.dropout == 1:
         seq_model.add(Dropout(0.4))
     seq_model.add(Dense(50, activation=FLAGS.activation))
+    if FLAGS.dropout == 1:
+        seq_model.add(Dropout(0.3))
     seq_model.add(Dense(10, activation=FLAGS.activation))
     if FLAGS.dropout == 1:
-        seq_model.add(Dropout(0.4))
+        seq_model.add(Dropout(0.1))
     seq_model.add(Dense(1))
 
     seq_model.compile(loss='mse', optimizer=adam(lr=0.0001), metrics=['mse'])

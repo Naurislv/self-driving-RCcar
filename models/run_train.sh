@@ -22,4 +22,4 @@ do
     done
 done
 
-# python Train.py --train_path ${train_path} --output_model model_archive/Test --epochs 10 --dropout 0 --activation selu --batch_norm 0
+# python Train.py --train_path ${train_path} --output_model model_archive/Test --epochs 5 --dropout 1 --activation selu --batch_norm 0
